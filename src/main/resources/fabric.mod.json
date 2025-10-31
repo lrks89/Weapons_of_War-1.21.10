@@ -1,0 +1,50 @@
+{
+	"schemaVersion": 1,
+	"id": "weapons_of_war",
+	"version": "1.0",
+	"name": "Weapons_Of_War",
+	"description": "You can never enough weapons!",
+	"authors": [
+      "lrks89"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/weapons_of_war/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"net.wowmod.Weapons_Of_War"
+		],
+		"fabric-datagen": [
+			"net.wowmod.Weapons_Of_WarDataGenerator"
+		]
+	},
+	"mixins": [
+		"weapons_of_war.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.17.3",
+		"minecraft": "~1.21.10",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	},
+  "custom": {
+    "modmenu": {
+      "update_checker": true
+    },
+    "mcb": [
+      {
+        "name": "Weapons",
+        "labelColor": -1842205,
+        "fillColor": -11988462,
+        "outlineColor": -9036780
+      }
+    ]
+  }
+}
