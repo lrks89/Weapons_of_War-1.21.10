@@ -24,6 +24,12 @@ repositories {
     //TerraformersMC - ModMenu
     maven {
         url = "https://maven.terraformersmc.com/"}
+
+    //GeckoLib
+    maven {
+        url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+
+    }
 }
 
 fabricApi {
@@ -47,6 +53,9 @@ dependencies {
     //Mod Menu & Mod Menu Badges
     modImplementation("com.terraformersmc:modmenu:16.0.0-rc.1")
     include(modImplementation("maven.modrinth:modmenu-badges-lib:2025.6.1"))
+
+    //GeckoLib
+    modImplementation "software.bernie.geckolib:geckolib-fabric-1.21.10:5.3-alpha-3"
 }
 
 processResources {
