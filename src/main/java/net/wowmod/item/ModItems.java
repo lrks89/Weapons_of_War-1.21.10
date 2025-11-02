@@ -10,12 +10,14 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.util.Identifier;
 import net.wowmod.Weapons_Of_War;
+import net.wowmod.item.custom.WeaponItem;
 
 import java.util.function.Function;
 
 public class ModItems {
     public static final Item M1113A_DAGGER = registerWeapon("m1113a_dagger",
-            Item::new, new Item.Settings().sword (ModToolMaterials.IRON_WEAPONS, -1, -2.0f));
+            WeaponItem::new, new Item.Settings().sword (ModToolMaterials.IRON_WEAPONS, -1, -2.0f));
+
     public static final Item M1213A_SHORTSWORD = registerWeapon("m1213a_shortsword",
             Item::new, new Item.Settings().sword (ModToolMaterials.IRON_WEAPONS, 0, -2.4f));
     public static final Item M1223A_LONGSWORD = registerWeapon("m1223a_longsword",
