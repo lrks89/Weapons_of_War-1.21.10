@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Weapons_Of_War implements ModInitializer {
-	public static final String MOD_ID = "weapons_of_war";
+	public static final String MOD_ID = "wowmod";
 
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 

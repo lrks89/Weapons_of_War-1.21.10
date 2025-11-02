@@ -24,6 +24,6 @@ public class ModItemGroups {
 
     public static void initialize() {
         // Since 1.21:
-        Registry.register(Registries.ITEM_GROUP, Identifier.of("weapons_of_war", "weapons_of_war"), WEAPONS_OF_WAR);
+        Registry.register(Registries.ITEM_GROUP, Identifier.of("wowmod", "wowmod"), WEAPONS_OF_WAR);
     }
 }

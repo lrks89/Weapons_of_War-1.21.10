@@ -2,7 +2,7 @@
 	"format_version": "1.21.6",
 	"credit": "Made with Blockbench",
 	"textures": {
-		"1": "weapons_of_war:item/m1113_dagger"
+		"1": "wowmod:item/m1113_dagger"
 	},
 	"elements": [
 		{

@@ -2,8 +2,8 @@
 	"format_version": "1.21.6",
 	"credit": "Made with Blockbench",
 	"textures": {
-		"1": "weapons_of_war:item/m2613_spear",
-		"particle": "weapons_of_war:item/m2613_spear"
+		"1": "wowmod:item/m2613_spear",
+		"particle": "wowmod:item/m2613_spear"
 	},
 	"elements": [
 		{
