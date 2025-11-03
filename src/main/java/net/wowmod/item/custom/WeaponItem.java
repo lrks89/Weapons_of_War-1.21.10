@@ -10,16 +10,13 @@ import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 
 public class WeaponItem extends Item {
-
     public WeaponItem(Settings settings) {
         super(settings);
     }
-
+    //applies Blocking Mechanic to WeaponItems
     @Override
-    public ActionResult use(World world, PlayerEntity user, Hand hand) {
-        ItemStack itemStack = user.getStackInHand(hand);
-        user.setCurrentHand(hand); // Starts the blocking animation
-        return ActionResult.CONSUME;
+    public UseAction getUseAction(ItemStack stack) {
+        return UseAction.BLOCK;
     }
 
     @Override
@@ -28,7 +25,9 @@ public class WeaponItem extends Item {
     }
 
     @Override
-    public UseAction getUseAction(ItemStack stack) {
-        return UseAction.BLOCK;
+    public ActionResult use(World world, PlayerEntity player, Hand hand) {
+        ItemStack itemStack = player.getStackInHand(hand);
+        player.setCurrentHand(hand);
+        return ActionResult.PASS;
     }
 }
