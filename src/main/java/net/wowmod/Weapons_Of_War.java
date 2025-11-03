@@ -4,7 +4,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.wowmod.item.ModItemGroups;
 import net.wowmod.item.ModItems;
-import net.wowmod.networking.WeaponBlockingHandler;
+import net.wowmod.util.WeaponBlockingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

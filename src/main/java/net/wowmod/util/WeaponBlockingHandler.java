@@ -1,13 +1,11 @@
-package net.wowmod.networking;
+package net.wowmod.util;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
-import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.Hand;
 import net.wowmod.item.custom.WeaponItem;
 
 public class WeaponBlockingHandler implements ServerLivingEntityEvents.AllowDamage {

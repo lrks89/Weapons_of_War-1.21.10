@@ -11,7 +11,7 @@ import net.minecraft.util.Identifier;
 public class ModItemGroups {
     public static final ItemGroup WEAPONS_OF_WAR = FabricItemGroup.builder()
             .icon(() -> new ItemStack(ModItems.M1223A_LONGSWORD))
-            .displayName(Text.translatable("itemGroup.weapons_of_war.weapons_of_war"))
+            .displayName(Text.translatable("itemGroup.wowmod.weapons_of_war"))
             .entries((context, entries) -> {
 
                 entries.add(ModItems.M1113A_DAGGER);
