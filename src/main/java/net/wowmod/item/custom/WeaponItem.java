@@ -8,6 +8,7 @@ import net.minecraft.item.consume.UseAction;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
+import net.wowmod.util.IParryPlayer;
 
 public class WeaponItem extends Item {
     public WeaponItem(Settings settings) {
@@ -26,8 +27,13 @@ public class WeaponItem extends Item {
 
     @Override
     public ActionResult use(World world, PlayerEntity player, Hand hand) {
-        ItemStack itemStack = player.getStackInHand(hand);
         player.setCurrentHand(hand);
-        return ActionResult.PASS;
+
+        if (!world.isClient()) {
+            // Store the current server time on the player object via the interface
+            ((IParryPlayer) player).wowmod_setLastParryTime(world.getTime());
+        }
+
+        return ActionResult.SUCCESS; // Or CONSUME_SUCCESS
     }
 }
