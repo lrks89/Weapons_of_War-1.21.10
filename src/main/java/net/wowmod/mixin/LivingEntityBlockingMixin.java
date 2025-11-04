@@ -10,9 +10,10 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.entity.projectile.ProjectileEntity;
 import net.wowmod.item.custom.WeaponItem;
 import net.wowmod.util.IParryPlayer;
-import net.wowmod.util.IStunnedEntity;
+import net.wowmod.util.IParryStunnedEntity; // Note: You should update the methods in this interface
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -22,31 +23,33 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(LivingEntity.class)
-public abstract class LivingEntityBlockingMixin implements IStunnedEntity {
+public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
 
-    //PARRY STUN TIMER AND INTERFACE IMPLEMENTATION
+    // PARRY STUN TIMER AND INTERFACE IMPLEMENTATION
     @Unique
-    private int wowmod_stunTicks = 0;
+    private int wowmod_parriedStunTicks = 0;
 
     @Override
     public int wowmod_getStunTicks() {
-        return this.wowmod_stunTicks;
+        // NOTE: This must match the method name in your IStunnedEntity interface
+        return this.wowmod_parriedStunTicks;
     }
 
     @Override
     public void wowmod_setStunTicks(int ticks) {
-        this.wowmod_stunTicks = ticks;
+        // NOTE: This must match the method name in your IStunnedEntity interface
+        this.wowmod_parriedStunTicks = ticks;
     }
 
     @Inject(method = "tick", at = @At("HEAD"))
-    private void wowmod_applyStunTick(CallbackInfo ci) {
-        if (this.wowmod_stunTicks > 0) {
+    private void wowmod_applyParriedStunTick(CallbackInfo ci) {
+        if (this.wowmod_parriedStunTicks > 0) {
             LivingEntity entity = (LivingEntity) (Object) this;
             if (entity instanceof PlayerEntity) {
                 return;
             }
 
-            this.wowmod_stunTicks--;
+            this.wowmod_parriedStunTicks--;
 
             if (!entity.getEntityWorld().isClient()) {
                 ServerWorld serverWorld = (ServerWorld) entity.getEntityWorld();
@@ -55,19 +58,23 @@ public abstract class LivingEntityBlockingMixin implements IStunnedEntity {
                 serverWorld.spawnParticles(
                         ParticleTypes.CRIT,
                         entity.getX(),
-                        entity.getBodyY(0.9D),
+                        entity.getBodyY(0.9D), // Still positioned around the head/upper body
                         entity.getZ(),
+                        // Count: Reduced significantly for a less busy burst
                         1,
+                        // Delta X/Y/Z: Keep a moderate spread to make it an impact, not just a single point
                         0.2D,
                         0.2D,
                         0.2D,
-                        0.0D
+                        // Speed/Velocity: A moderate speed for a quick, noticeable outward burst
+                        0.15D
                 );
             }
             entity.setVelocity(Vec3d.ZERO);
             entity.setAttacker(null);
         }
     }
+
     // 1. BLOCKING CHECK (Enables Blocking for WeaponItem)
     @Inject(method = "isBlocking", at = @At("HEAD"), cancellable = true)
     private void wowmod_checkCustomBlock(CallbackInfoReturnable<Boolean> cir) {
@@ -82,14 +89,14 @@ public abstract class LivingEntityBlockingMixin implements IStunnedEntity {
         }
     }
 
-    // 2A. PERFECT PARRY and STUN MECHANICS
+    // 2A. PERFECT PARRY and PARRIED STUN MECHANICS
     @Inject(
             method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
             at = @At(value = "HEAD"),
             cancellable = true
     )
     private void wowmod_parryCancel(
-            net.minecraft.server.world.ServerWorld serverWorld, // Changed name to avoid conflict
+            net.minecraft.server.world.ServerWorld serverWorld,
             DamageSource source,
             float originalAmount,
             CallbackInfoReturnable<Boolean> cir
@@ -98,29 +105,25 @@ public abstract class LivingEntityBlockingMixin implements IStunnedEntity {
         if (!(entity instanceof PlayerEntity player) || !player.isBlocking()) { return; }
 
         IParryPlayer parryPlayer = (IParryPlayer) player;
-        // Use the passed-in serverWorld instance for time
         long timeDelta = serverWorld.getTime() - parryPlayer.wowmod_getLastParryTime();
         final int PARRY_WINDOW_TICKS = 5;
 
         if (timeDelta <= PARRY_WINDOW_TICKS) {
-            // **PERFECT PARRY SUCCESS**
-
             Entity attacker = source.getAttacker();
 
-            // --- TIMED STUN APPLICATION ---
             if (attacker instanceof LivingEntity livingAttacker) {
-                final int STUN_DURATION = 30; // 1.5 seconds (30 ticks)
 
-                // Set the countdown timer on the attacker
-                if (livingAttacker instanceof IStunnedEntity stunnedAttacker) {
-                    stunnedAttacker.wowmod_setStunTicks(STUN_DURATION);
+                if (!(source.getSource() instanceof ProjectileEntity)) {
+                    final int PARRIED_STUN_DURATION = 30; // 1.5 seconds (30 ticks)
+
+                    if (livingAttacker instanceof IParryStunnedEntity stunnedAttacker) {
+                        stunnedAttacker.wowmod_setStunTicks(PARRIED_STUN_DURATION);
+                    }
+
+                    livingAttacker.setVelocity(Vec3d.ZERO);
+                    livingAttacker.setAttacker(null);
                 }
-
-                // Immediately apply stun effects for the first tick
-                livingAttacker.setVelocity(Vec3d.ZERO);
-                livingAttacker.setAttacker(null);
             }
-            // ------------------------------
 
             serverWorld.playSound(
                     null, player.getX(), player.getY(), player.getZ(),
@@ -128,7 +131,6 @@ public abstract class LivingEntityBlockingMixin implements IStunnedEntity {
                     1.5F, 1.5F + serverWorld.random.nextFloat() * 0.2F
             );
 
-            // Cancel the method (No damage, no red flash, no flinch)
             cir.setReturnValue(false);
             cir.cancel();
         }
@@ -177,9 +179,9 @@ public abstract class LivingEntityBlockingMixin implements IStunnedEntity {
             CallbackInfoReturnable<Boolean> cir) {
 
         LivingEntity entity = (LivingEntity) (Object) this;
-        if (!(entity instanceof PlayerEntity player)) return;
+        if (!(entity instanceof PlayerEntity)) return;
 
-        if (cir.getReturnValueZ() && player.isBlocking()) {
+        if (cir.getReturnValueZ() && ((PlayerEntity) entity).isBlocking()) {
             cir.setReturnValue(false);
         }
     }
@@ -198,6 +200,77 @@ public abstract class LivingEntityBlockingMixin implements IStunnedEntity {
             if (player.isBlocking()) {
                 ci.cancel();
             }
+        }
+    }
+
+    // 5. COUNTER ATTACK DAMAGE (1.5x damage against parried-stunned targets)
+    @ModifyVariable(
+            method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
+            at = @At(value = "HEAD"),
+            argsOnly = true,
+            index = 3
+    )
+    private float wowmod_counterAttackDamage(
+            float originalAmount,
+            net.minecraft.server.world.ServerWorld world,
+            DamageSource source
+    ) {
+
+        LivingEntity target = (LivingEntity) (Object) this;
+        if (!(target instanceof IParryStunnedEntity stunnedTarget) || stunnedTarget.wowmod_getStunTicks() <= 0) {
+            return originalAmount;
+        }
+
+        Entity attacker = source.getAttacker();
+        if (!(attacker instanceof PlayerEntity)) {
+            return originalAmount;
+        }
+
+        final float COUNTER_MULTIPLIER = 1.5F;
+        return originalAmount * COUNTER_MULTIPLIER;
+    }
+    @Inject(
+            method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
+            at = @At(value = "RETURN", ordinal = 1) // Injects after the main damage logic has run
+    )
+
+    // 6. COUNTER ATTACK PARTICLES
+    private void wowmod_spawnCounterCritParticles(
+            net.minecraft.server.world.ServerWorld world,
+            DamageSource source,
+            float originalAmount,
+            CallbackInfoReturnable<Boolean> cir) {
+
+        if (!cir.getReturnValueZ()) {
+            return;
+        }
+
+        LivingEntity target = (LivingEntity) (Object) this;
+        Entity attacker = source.getAttacker();
+
+        if (!(attacker instanceof PlayerEntity)) {
+            return;
+        }
+
+        if (!(target instanceof IParryStunnedEntity stunnedTarget) || stunnedTarget.wowmod_getStunTicks() <= 0) {
+            return;
+        }
+
+        if (!world.isClient()) {
+            ServerWorld serverWorld = (ServerWorld) world;
+
+            // Spawn many CRIT particles (can adjust count and spread)
+            serverWorld.spawnParticles(
+                    ParticleTypes.CRIT,
+                    target.getX(),
+                    target.getBodyY(0.9D),
+                    target.getZ(),
+                    10, // Count of particles
+                    0.5D, // Spread X
+                    0.5D, // Spread Y
+                    0.5D, // Spread Z
+                    0.1D  // Speed
+            );
         }
     }
 }
