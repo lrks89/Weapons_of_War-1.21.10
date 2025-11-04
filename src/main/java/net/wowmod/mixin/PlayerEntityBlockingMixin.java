@@ -6,7 +6,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
 @Mixin(PlayerEntity.class)
-public abstract class PlayerEntityMixin implements IParryPlayer {
+public abstract class PlayerEntityBlockingMixin implements IParryPlayer {
 
     @Unique
     private long wowmod_lastParryTime = 0; // The custom field
