@@ -31,13 +31,11 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
 
     @Override
     public int wowmod_getStunTicks() {
-        // NOTE: This must match the method name in your IStunnedEntity interface
         return this.wowmod_parriedStunTicks;
     }
 
     @Override
     public void wowmod_setStunTicks(int ticks) {
-        // NOTE: This must match the method name in your IStunnedEntity interface
         this.wowmod_parriedStunTicks = ticks;
     }
 
@@ -54,19 +52,16 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
             if (!entity.getEntityWorld().isClient()) {
                 ServerWorld serverWorld = (ServerWorld) entity.getEntityWorld();
 
-                // Spawn particles
+                //Stunned Particles
                 serverWorld.spawnParticles(
                         ParticleTypes.CRIT,
                         entity.getX(),
-                        entity.getBodyY(0.9D), // Still positioned around the head/upper body
+                        entity.getBodyY(0.9D),
                         entity.getZ(),
-                        // Count: Reduced significantly for a less busy burst
                         1,
-                        // Delta X/Y/Z: Keep a moderate spread to make it an impact, not just a single point
                         0.2D,
                         0.2D,
                         0.2D,
-                        // Speed/Velocity: A moderate speed for a quick, noticeable outward burst
                         0.15D
                 );
             }
@@ -114,7 +109,7 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
             if (attacker instanceof LivingEntity livingAttacker) {
 
                 if (!(source.getSource() instanceof ProjectileEntity)) {
-                    final int PARRIED_STUN_DURATION = 30; // 1.5 seconds (30 ticks)
+                    final int PARRIED_STUN_DURATION = 20; // 1 seconds (20 ticks)
 
                     if (livingAttacker instanceof IParryStunnedEntity stunnedAttacker) {
                         stunnedAttacker.wowmod_setStunTicks(PARRIED_STUN_DURATION);
@@ -125,10 +120,11 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                 }
             }
 
+            //Parry Sound Effect
             serverWorld.playSound(
                     null, player.getX(), player.getY(), player.getZ(),
-                    SoundEvents.BLOCK_AMETHYST_BLOCK_STEP, SoundCategory.PLAYERS,
-                    1.5F, 1.5F + serverWorld.random.nextFloat() * 0.2F
+                    SoundEvents.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS,
+                    1.2F, 1.3F + serverWorld.random.nextFloat() * 0.1F
             );
 
             cir.setReturnValue(false);
@@ -155,11 +151,12 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         long timeDelta = world.getTime() - parryPlayer.wowmod_getLastParryTime();
         final int PARRY_WINDOW_TICKS = 5;
 
+        //Block Sound Effect
         if (timeDelta > PARRY_WINDOW_TICKS) {
             world.playSound(
                     null, player.getX(), player.getY(), player.getZ(),
-                    SoundEvents.BLOCK_AMETHYST_BLOCK_STEP, SoundCategory.PLAYERS,
-                    1.5F, 1.0F + world.random.nextFloat() * 0.1F
+                    SoundEvents.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS,
+                    1.2F, 1.1F + world.random.nextFloat() * 0.1F
             );
             return originalAmount * 0.5F;
         }
