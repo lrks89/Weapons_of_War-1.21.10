@@ -2,10 +2,12 @@ package net.wowmod.item.custom;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.CrossbowItem; // ADDED
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.ShieldItem; // ADDED
+import net.minecraft.item.TridentItem; // ADDED
 import net.minecraft.item.consume.UseAction;
-import net.minecraft.registry.Registries;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
@@ -34,15 +36,35 @@ public class WeaponItem extends Item {
 
     @Override
     public ActionResult use(World world, PlayerEntity player, Hand hand) {
+
+        // --- PRIORITY CHECK FOR OFFHAND ITEMS ---
+        if (hand == Hand.MAIN_HAND) {
+            ItemStack offhandStack = player.getStackInHand(Hand.OFF_HAND);
+            Item offhandItem = offhandStack.getItem();
+
+            // If the offhand item is a Shield, Trident, or Crossbow,
+            // return PASS to give its usage logic priority.
+            if (offhandItem instanceof ShieldItem ||
+                    offhandItem instanceof TridentItem ||
+                    offhandItem instanceof CrossbowItem) {
+
+                return ActionResult.PASS;
+            }
+        }
+        // --- END PRIORITY CHECK ---
+
         ItemStack itemStack = player.getStackInHand(hand);
 
+        // Check weapon cooldown (parry debounce)
         if (player.getItemCooldownManager().isCoolingDown(itemStack)) {
             return ActionResult.PASS;
         }
 
+        // Start the blocking/parry animation
         player.setCurrentHand(hand);
 
         if (!world.isClient()) {
+            // Server-side logic for setting the parry window and applying cooldown
             ((IParryPlayer) player).wowmod_setLastParryTime(world.getTime());
             player.getItemCooldownManager().set(itemStack, PARRY_COOLDOWN_TICKS);
         }
