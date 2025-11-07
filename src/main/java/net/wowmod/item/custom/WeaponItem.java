@@ -37,16 +37,18 @@ public class WeaponItem extends Item {
     @Override
     public ActionResult use(World world, PlayerEntity player, Hand hand) {
 
-        // --- PRIORITY CHECK FOR OFFHAND ITEMS ---
+        // --- UPDATED PRIORITY CHECK FOR OFFHAND ITEMS ---
         if (hand == Hand.MAIN_HAND) {
             ItemStack offhandStack = player.getStackInHand(Hand.OFF_HAND);
             Item offhandItem = offhandStack.getItem();
 
-            // If the offhand item is a Shield, Trident, or Crossbow,
-            // return PASS to give its usage logic priority.
+            // 1. Check if the offhand item is a high-priority vanilla item (Shield, Trident, Crossbow).
+            // 2. OR, check if the offhand item is a custom WeaponItem.
+            //    If either is true, return PASS to give the offhand slot priority.
             if (offhandItem instanceof ShieldItem ||
                     offhandItem instanceof TridentItem ||
-                    offhandItem instanceof CrossbowItem) {
+                    offhandItem instanceof CrossbowItem ||
+                    offhandItem instanceof WeaponItem) { // <--- ADDED THIS CHECK
 
                 return ActionResult.PASS;
             }
