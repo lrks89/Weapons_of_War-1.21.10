@@ -48,7 +48,8 @@ public class WeaponItem extends Item {
             if (offhandItem instanceof ShieldItem ||
                     offhandItem instanceof TridentItem ||
                     offhandItem instanceof CrossbowItem ||
-                    offhandItem instanceof WeaponItem) { // <--- ADDED THIS CHECK
+                    offhandItem instanceof WeaponItem ||
+                    offhandItem instanceof ParryShieldItem) {
 
                 return ActionResult.PASS;
             }
