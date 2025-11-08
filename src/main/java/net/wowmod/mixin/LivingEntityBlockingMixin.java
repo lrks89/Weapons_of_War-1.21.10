@@ -6,6 +6,8 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.consume.UseAction;
+import net.minecraft.registry.tag.DamageTypeTags;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -189,6 +191,21 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
 
         // If parry window missed (regular block)
         if (timeDelta > PARRY_WINDOW_TICKS) {
+            if (!world.isClient() && !source.isIn(DamageTypeTags.BYPASSES_SHIELD)) {
+                // The new .damage() method requires ServerWorld and ServerPlayerEntity
+                ServerWorld serverWorld = (ServerWorld) world;
+                ServerPlayerEntity serverPlayer = (ServerPlayerEntity) player;
+
+                player.getActiveItem().damage(
+                        1, // int amount
+                        serverWorld, // ServerWorld world
+                        serverPlayer, // ServerPlayerEntity user
+                        // The damage() method now handles sending the break status
+                        // automatically. This lambda is for *additional* logic
+                        // on break, so we can leave it empty.
+                        (item) -> {}
+                );
+            }
 
             if (isParryShield) {
                 // ✅ Parry Shield: BLOCK 100% of damage
