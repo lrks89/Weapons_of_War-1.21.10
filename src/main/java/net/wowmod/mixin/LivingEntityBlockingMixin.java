@@ -7,10 +7,12 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.consume.UseAction;
 import net.minecraft.registry.tag.DamageTypeTags;
+import net.minecraft.registry.tag.ItemTags; // NEW IMPORT FOR AXE TAG
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.entity.projectile.ProjectileEntity;
@@ -30,14 +32,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(value = LivingEntity.class, priority = 1001)
 public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
 
-    // Stun constants
+    // Stun and Block Constants
     private static final int PARRY_WINDOW_TICKS = 5;
     private static final int PARRIED_STUN_DURATION = 20; // 1 second
+    private static final int SHIELD_DISABLE_TICKS = 100; // 5 seconds (20 ticks per second)
 
     // PARRY STUN TIMER AND INTERFACE IMPLEMENTATION
     @Unique
     private int wowmod_parriedStunTicks = 0;
+    @Unique
+    private int wowmod_shieldDisableTicks = 0; // NEW FIELD
 
+    // --- INTERFACE IMPLEMENTATIONS ---
     @Override
     public int wowmod_getStunTicks() {
         return this.wowmod_parriedStunTicks;
@@ -48,35 +54,45 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         this.wowmod_parriedStunTicks = ticks;
     }
 
+    // NEW SHIELD DISABLE TRACKING
+    // NOTE: You must also add these two methods to your IParryPlayer interface file!
+    public int wowmod_getShieldDisableTicks() {
+        return this.wowmod_shieldDisableTicks;
+    }
+
+    public void wowmod_setShieldDisableTicks(int ticks) {
+        this.wowmod_shieldDisableTicks = ticks;
+    }
+
+
     @Inject(method = "tick", at = @At("HEAD"))
-    private void wowmod_applyParriedStunTick(CallbackInfo ci) {
+    private void wowmod_applyStunAndDisableTick(CallbackInfo ci) {
+        LivingEntity entity = (LivingEntity) (Object) this;
+
+        // Stun Tick Logic (for all LivingEntities)
         if (this.wowmod_parriedStunTicks > 0) {
-            LivingEntity entity = (LivingEntity) (Object) this;
             if (entity instanceof PlayerEntity) {
-                return;
+                // Players aren't stunned, just skip particle effects
+            } else {
+                this.wowmod_parriedStunTicks--;
+
+                if (!entity.getEntityWorld().isClient()) {
+                    ServerWorld serverWorld = (ServerWorld) entity.getEntityWorld();
+                    //Stunned Particles
+                    serverWorld.spawnParticles(
+                            ParticleTypes.CRIT, entity.getX(), entity.getBodyY(0.9D), entity.getZ(),
+                            1, 0.2D, 0.2D, 0.2D, 0.15D
+                    );
+                }
+                Vec3d currentVelocity = entity.getVelocity();
+                entity.setVelocity(0.0, currentVelocity.y, 0.0);
+                entity.setAttacker(null);
             }
+        }
 
-            this.wowmod_parriedStunTicks--;
-
-            if (!entity.getEntityWorld().isClient()) {
-                ServerWorld serverWorld = (ServerWorld) entity.getEntityWorld();
-
-                //Stunned Particles
-                serverWorld.spawnParticles(
-                        ParticleTypes.CRIT,
-                        entity.getX(),
-                        entity.getBodyY(0.9D),
-                        entity.getZ(),
-                        1,
-                        0.2D,
-                        0.2D,
-                        0.2D,
-                        0.15D
-                );
-            }
-            Vec3d currentVelocity = entity.getVelocity();
-            entity.setVelocity(0.0, currentVelocity.y, 0.0);
-            entity.setAttacker(null);
+        // Shield Disable Tick Logic (for PlayerEntity only)
+        if (entity instanceof PlayerEntity && this.wowmod_shieldDisableTicks > 0) {
+            this.wowmod_shieldDisableTicks--;
         }
     }
 
@@ -85,6 +101,15 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
     @Inject(method = "isBlocking", at = @At("HEAD"), cancellable = true)
     private void wowmod_checkCustomBlock(CallbackInfoReturnable<Boolean> cir) {
         if (!((Object)this instanceof PlayerEntity player)) { return; }
+
+        IParryPlayer parryPlayer = (IParryPlayer) player;
+
+        // NEW: Check if the shield is disabled by an axe hit
+        if (parryPlayer.wowmod_getShieldDisableTicks() > 0) {
+            cir.setReturnValue(false); // Cannot block if disabled
+            cir.cancel();
+            return;
+        }
 
         if (player.isUsingItem()) {
             Item activeItem = player.getActiveItem().getItem();
@@ -102,6 +127,7 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
     }
 
     // 2A. PERFECT PARRY and PARRIED STUN MECHANICS (Handles damage cancellation and parry effects)
+    // NOTE: AXE CHECK IS NOT HERE. A PERFECT PARRY ALWAYS WORKS.
     @Inject(
             method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
             at = @At(value = "HEAD"),
@@ -141,7 +167,7 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                         Vec3d knockbackVector = player.getRotationVector().negate().normalize();
                         livingAttacker.takeKnockback(1.0, knockbackVector.x, knockbackVector.z);
 
-                        // ✅ NEW SHIELD PARRY SOUND EFFECT
+                        // ✅ SHIELD PARRY SOUND EFFECT
                         serverWorld.playSound(
                                 null, player.getX(), player.getY(), player.getZ(),
                                 SoundEvents.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS,
@@ -169,6 +195,7 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
     }
 
     // 2B. REGULAR BLOCK MECHANICS (Differentiates between Shield 100% and Weapon 50% block)
+    // AXE CHECK IS HERE - IT ONLY AFFECTS THE REGULAR BLOCK
     @ModifyVariable(
             method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
             at = @At(value = "HEAD"),
@@ -186,11 +213,47 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         IParryPlayer parryPlayer = (IParryPlayer) player;
         long timeDelta = world.getTime() - parryPlayer.wowmod_getLastParryTime();
 
-        // Determine if a shield or weapon is being used
-        boolean isParryShield = player.getActiveItem().getItem() instanceof ParryShieldItem;
-
         // If parry window missed (regular block)
         if (timeDelta > PARRY_WINDOW_TICKS) {
+
+            Entity attacker = source.getAttacker();
+            Item activeItem = player.getActiveItem().getItem();
+
+            // ✅ DECLARE AND INITIALIZE THE VARIABLES HERE
+            boolean isParryShield = activeItem instanceof ParryShieldItem;
+            boolean isWeaponItem = activeItem instanceof WeaponItem;
+
+            // Check if it's a blocking item AND not disabled (redundant check, but safe)
+            if (isParryShield || isWeaponItem) {
+
+                // ⚔️ AXE DISABLE SHIELD/WEAPON LOGIC
+                if (attacker instanceof LivingEntity livingAttacker) {
+                    // Check if the attacker is holding a recognized axe
+                    if (livingAttacker.getMainHandStack().isIn(ItemTags.AXES)) {
+
+                        if (!world.isClient()) {
+                            parryPlayer.wowmod_setShieldDisableTicks(SHIELD_DISABLE_TICKS);
+
+                            player.getItemCooldownManager().set(player.getActiveItem(), SHIELD_DISABLE_TICKS);
+
+                            world.playSound(
+                                    null, player.getX(), player.getY(), player.getZ(),
+                                    SoundEvents.ITEM_SHIELD_BREAK, SoundCategory.PLAYERS,
+                                    1.0F, 0.8F + world.random.nextFloat() * 0.4F);
+                        }
+                        if (isParryShield) {
+                            return 0.0F;
+                        }
+                        if (isWeaponItem) {
+                            return originalAmount * 0.5F;
+
+                        }
+                    }
+                }
+            }
+            // ------------------------------------
+
+            // Standard Block/Durability Damage Logic (runs if not disabled by axe)
             if (!world.isClient() && !source.isIn(DamageTypeTags.BYPASSES_SHIELD)) {
                 // The new .damage() method requires ServerWorld and ServerPlayerEntity
                 ServerWorld serverWorld = (ServerWorld) world;
@@ -200,10 +263,7 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                         1, // int amount
                         serverWorld, // ServerWorld world
                         serverPlayer, // ServerPlayerEntity user
-                        // The damage() method now handles sending the break status
-                        // automatically. This lambda is for *additional* logic
-                        // on break, so we can leave it empty.
-                        (item) -> {}
+                        (item) -> {} // Additional break logic lambda
                 );
             }
 
@@ -215,7 +275,8 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                         1.0F, 1.0F + world.random.nextFloat() * 0.1F
                 );
                 return 0.0F;
-            } else {
+
+            } else if (isWeaponItem) { // Added explicit check for WeaponItem
                 // ⚔️ WeaponItem: BLOCK 50% of damage
                 world.playSound(
                         null, player.getX(), player.getY(), player.getZ(),
@@ -246,7 +307,7 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
 
         // If the damage method returned TRUE (damage was applied) AND the player is blocking,
         // we set the return value to FALSE to suppress the flinch animation/effect.
-        // NOTE: This will only be true for Weapon blocks (50% damage reduction)
+        // NOTE: This will only be true for Weapon blocks (50% damage reduction) or if the shield was axed!
         if (cir.getReturnValueZ() && ((PlayerEntity) entity).isBlocking()) {
             cir.setReturnValue(false);
         }
