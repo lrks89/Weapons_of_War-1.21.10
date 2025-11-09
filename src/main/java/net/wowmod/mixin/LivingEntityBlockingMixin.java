@@ -119,10 +119,27 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         long timeDelta = serverWorld.getTime() - parryPlayer.wowmod_getLastParryTime();
 
         if (timeDelta <= PARRY_WINDOW_TICKS) {
+
             Entity attacker = source.getAttacker();
 
             if (attacker instanceof LivingEntity livingAttacker) {
                 boolean isParryShield = player.getActiveItem().getItem() instanceof ParryShieldItem;
+
+                if (isParryShield) {
+                    // ParryShield
+                    serverWorld.playSound(
+                            null, player.getX(), player.getY(), player.getZ(),
+                            SoundEvents.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS,
+                            1.0F, 1.2F + serverWorld.random.nextFloat() * 0.1F
+                    );
+                } else {
+                    //WeaponItem
+                    serverWorld.playSound(
+                            null, player.getX(), player.getY(), player.getZ(),
+                            SoundEvents.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS,
+                            1.2F, 1.3F + serverWorld.random.nextFloat() * 0.1F
+                    );
+                }
 
                 if (!(source.getSource() instanceof ProjectileEntity)) {
 
@@ -135,21 +152,10 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                         Vec3d knockbackVector = player.getRotationVector().negate().normalize();
                         livingAttacker.takeKnockback(1.5, knockbackVector.x, knockbackVector.z);
 
-                        serverWorld.playSound(
-                                null, player.getX(), player.getY(), player.getZ(),
-                                SoundEvents.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS,
-                                1.0F, 1.2F + serverWorld.random.nextFloat() * 0.1F
-                        );
                     } else {
                         //WeaponItem
                         Vec3d knockbackVector = player.getRotationVector().negate().normalize();
                         livingAttacker.takeKnockback(0.5, knockbackVector.x, knockbackVector.z);
-
-                        serverWorld.playSound(
-                                null, player.getX(), player.getY(), player.getZ(),
-                                SoundEvents.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS,
-                                1.2F, 1.3F + serverWorld.random.nextFloat() * 0.1F
-                        );
                     }
                 }
                 cir.setReturnValue(false);
@@ -256,8 +262,6 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         LivingEntity entity = (LivingEntity) (Object) this;
         if (!(entity instanceof PlayerEntity)) return;
 
-        // If the damage method returned TRUE (damage was applied) AND the player is blocking,
-        // we set the return value to FALSE to suppress the flinch animation/effect.
         if (cir.getReturnValueZ() && ((PlayerEntity) entity).isBlocking()) {
             cir.setReturnValue(false);
         }
