@@ -71,6 +71,6 @@ public class WeaponItem extends Item {
             ((IParryPlayer) player).wowmod_setLastParryTime(world.getTime());
             player.getItemCooldownManager().set(itemStack, PARRY_COOLDOWN_TICKS);
         }
-        return ActionResult.SUCCESS;
+        return ActionResult.CONSUME;
     }
 }

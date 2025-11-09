@@ -31,7 +31,6 @@ public class ParryShieldItem extends ShieldItem {
     @Override
     public ActionResult use(World world, PlayerEntity player, Hand hand) {
 
-
         ItemStack itemStack = player.getStackInHand(hand);
 
         // Check weapon cooldown (parry debounce)
@@ -46,6 +45,6 @@ public class ParryShieldItem extends ShieldItem {
             parryPlayer.wowmod_setLastParryTime(world.getTime());
             player.getItemCooldownManager().set(itemStack, PARRY_COOLDOWN_TICKS);
         }
-        return ActionResult.SUCCESS;
+        return ActionResult.CONSUME;
     }
 }

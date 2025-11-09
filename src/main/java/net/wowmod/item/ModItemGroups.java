@@ -20,7 +20,7 @@ public class ModItemGroups {
                 entries.add(ModItems.M1513A_GREATSWORD);
                 entries.add(ModItems.M2613A_SPEAR);
 
-                entries.add(ModItems.PARRY_SHIELD);
+                entries.add(ModItems.TEST_SHIELD);
 
             }).build();
 

@@ -1,7 +1,8 @@
 {
 	"credit": "Made with Blockbench",
 	"textures": {
-		"0": "wowmod:item/parry_shield_blocking"
+		"0": "wowmod:item/test_shield",
+		"particle": "wowmod:item/test_shield"
 	},
 	"elements": [
 		{

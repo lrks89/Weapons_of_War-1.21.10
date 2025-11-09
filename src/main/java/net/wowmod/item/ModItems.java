@@ -33,10 +33,9 @@ public class ModItems {
             WeaponItem::new, new Item.Settings().sword (ModToolMaterials.IRON_WEAPONS, 0, -2.6f));
 
 
-    public static final Item PARRY_SHIELD = registerShieldItem("parry_shield",
+    public static final Item TEST_SHIELD = registerShieldItem("test_shield",
             ParryShieldItem::new,
             new Item.Settings().maxDamage(500));
-
 
     private static void customModIngredients(FabricItemGroupEntries entries) {
     }
@@ -48,7 +47,8 @@ public class ModItems {
         entries.add(M1513A_GREATSWORD);
         entries.add(M2613A_SPEAR);
 
-        entries.add(PARRY_SHIELD);
+        entries.add(TEST_SHIELD);
+
 
     }
     private static <T extends Item> T registerItem(String name, Function<Item.Settings, T> itemFactory, Item.Settings settings) {
