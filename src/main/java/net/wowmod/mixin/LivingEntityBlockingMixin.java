@@ -143,7 +143,7 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                     if (isParryShield) {
                         // Apply knockback to the attacker
                         Vec3d knockbackVector = player.getRotationVector().negate().normalize();
-                        livingAttacker.takeKnockback(1.0, knockbackVector.x, knockbackVector.z);
+                        livingAttacker.takeKnockback(1.5, knockbackVector.x, knockbackVector.z);
 
                         // ✅ SHIELD PARRY SOUND EFFECT
                         serverWorld.playSound(
@@ -153,8 +153,8 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                         );
                     } else {
                         // WeaponItem parry logic
-                        livingAttacker.setVelocity(Vec3d.ZERO);
-                        livingAttacker.setAttacker(null);
+                        Vec3d knockbackVector = player.getRotationVector().negate().normalize();
+                        livingAttacker.takeKnockback(0.5, knockbackVector.x, knockbackVector.z);
 
                         // Original Weapon Parry Sound Effect
                         serverWorld.playSound(
