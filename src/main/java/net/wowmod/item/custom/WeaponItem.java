@@ -14,8 +14,7 @@ import net.minecraft.world.World;
 import net.wowmod.util.IParryPlayer;
 
 public class WeaponItem extends Item {
-
-    //Parry Cooldown
+    // --- Blocking / Parrying Mechanics ---
     private static final int PARRY_COOLDOWN_TICKS = 10; //0.5 second cooldown
 
     public WeaponItem(Settings settings) {
