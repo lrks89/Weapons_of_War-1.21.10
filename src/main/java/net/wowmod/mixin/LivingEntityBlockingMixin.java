@@ -32,12 +32,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(value = LivingEntity.class, priority = 1001)
 public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
 
-    // Stun and Block Constants
+    // --- STUN AND BLOCK CONSTANTS ---
     private static final int PARRY_WINDOW_TICKS = 5;
     private static final int PARRIED_STUN_DURATION = 20; // 1 second
     private static final int AXE_COOLDOWN_DURATION = 100; // 5 seconds (20 ticks per second)
 
-    // PARRY STUN TIMER AND INTERFACE IMPLEMENTATION
+    // --- PARRY STUN TIMER AND INTERFACE IMPLEMENTATION ---
     @Unique
     private int wowmod_parriedStunTicks = 0;
 
@@ -52,11 +52,11 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         this.wowmod_parriedStunTicks = ticks;
     }
 
+    // --- STUN TICK LOGIC ---
     @Inject(method = "tick", at = @At("HEAD"))
     private void wowmod_applyStunAndDisableTick(CallbackInfo ci) {
         LivingEntity entity = (LivingEntity) (Object) this;
 
-        // Stun Tick Logic (for all LivingEntities)
         if (this.wowmod_parriedStunTicks > 0) {
             if (entity instanceof PlayerEntity) {
                 // Players aren't stunned, just skip particle effects
@@ -78,9 +78,7 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         }
     }
 
-
-
-    // 1. BLOCKING CHECK (Enables Blocking for WeaponItem)
+    // --- 1. BLOCKING CHECK (Enables Blocking for WeaponItem) ---
     @Inject(method = "isBlocking", at = @At("HEAD"), cancellable = true)
     private void wowmod_checkCustomBlock(CallbackInfoReturnable<Boolean> cir) {
         if (!((Object)this instanceof PlayerEntity player)) { return; }
@@ -102,10 +100,7 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         }
     }
 
-
-
-    // 2A. PERFECT PARRY and PARRIED STUN MECHANICS (Handles damage cancellation and parry effects)
-    // NOTE: AXE CHECK IS NOT HERE. A PERFECT PARRY ALWAYS WORKS.
+    // --- 2A. PERFECT PARRY and PARRIED STUN MECHANICS (Handles damage cancellation and parry effects) ---
     @Inject(
             method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
             at = @At(value = "HEAD"),
@@ -118,22 +113,17 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
             CallbackInfoReturnable<Boolean> cir
     ) {
         LivingEntity entity = (LivingEntity) (Object) this;
-        // CRITICAL CHECK: Player must be blocking to proceed!
-        if (!(entity instanceof PlayerEntity player) || !player.isBlocking()) { return; }
 
+        if (!(entity instanceof PlayerEntity player) || !player.isBlocking()) { return; }
         IParryPlayer parryPlayer = (IParryPlayer) player;
         long timeDelta = serverWorld.getTime() - parryPlayer.wowmod_getLastParryTime();
 
-        // If within the perfect parry window
         if (timeDelta <= PARRY_WINDOW_TICKS) {
-
             Entity attacker = source.getAttacker();
 
             if (attacker instanceof LivingEntity livingAttacker) {
-                // Determine if a shield or weapon was used for the parry
                 boolean isParryShield = player.getActiveItem().getItem() instanceof ParryShieldItem;
 
-                // Apply Stun and Knockback if not a projectile
                 if (!(source.getSource() instanceof ProjectileEntity)) {
 
                     if (livingAttacker instanceof IParryStunnedEntity stunnedAttacker) {
@@ -141,22 +131,20 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                     }
 
                     if (isParryShield) {
-                        // Apply knockback to the attacker
+                        //ParryShield
                         Vec3d knockbackVector = player.getRotationVector().negate().normalize();
                         livingAttacker.takeKnockback(1.5, knockbackVector.x, knockbackVector.z);
 
-                        // ✅ SHIELD PARRY SOUND EFFECT
                         serverWorld.playSound(
                                 null, player.getX(), player.getY(), player.getZ(),
                                 SoundEvents.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS,
                                 1.0F, 1.2F + serverWorld.random.nextFloat() * 0.1F
                         );
                     } else {
-                        // WeaponItem parry logic
+                        //WeaponItem
                         Vec3d knockbackVector = player.getRotationVector().negate().normalize();
                         livingAttacker.takeKnockback(0.5, knockbackVector.x, knockbackVector.z);
 
-                        // Original Weapon Parry Sound Effect
                         serverWorld.playSound(
                                 null, player.getX(), player.getY(), player.getZ(),
                                 SoundEvents.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS,
@@ -164,18 +152,13 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                         );
                     }
                 }
-
-                // Cancel damage entirely due to successful parry (100% block)
                 cir.setReturnValue(false);
                 cir.cancel();
             }
         }
     }
 
-
-
-    // 2B. REGULAR BLOCK MECHANICS (Differentiates between Shield 100% and Weapon 50% block)
-    // AXE CHECK IS HERE - IT ONLY AFFECTS THE REGULAR BLOCK
+    // --- 2B. REGULAR BLOCK MECHANICS --
     @ModifyVariable(
             method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
             at = @At(value = "HEAD"),
@@ -193,48 +176,33 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         IParryPlayer parryPlayer = (IParryPlayer) player;
         long timeDelta = world.getTime() - parryPlayer.wowmod_getLastParryTime();
 
-        // If parry window missed (regular block)
         if (timeDelta > PARRY_WINDOW_TICKS) {
-
             Entity attacker = source.getAttacker();
             ItemStack activeStack = player.getActiveItem(); // Get the ItemStack here
             Item activeItem = activeStack.getItem();
 
-            // DECLARE AND INITIALIZE THE VARIABLES HERE
             boolean isParryShield = activeItem instanceof ParryShieldItem;
             boolean isWeaponItem = activeItem instanceof WeaponItem;
 
-            // Check if it's a blocking item
             if (isParryShield || isWeaponItem) {
 
-                // --- FIX: DURABILITY DAMAGE LOGIC MOVED UP ---
-                // Standard Block/Durability Damage Logic (runs before axe check)
                 if (!world.isClient() && !source.isIn(DamageTypeTags.BYPASSES_SHIELD)) {
-                    // The new .damage() method requires ServerWorld and ServerPlayerEntity
                     ServerWorld serverWorld = (ServerWorld) world;
-                    // Check if it's a ServerPlayerEntity before casting and damaging
+
                     if (player instanceof ServerPlayerEntity serverPlayer) {
-                        activeStack.damage( // Use the activeStack here
-                                1, // int amount
-                                serverWorld, // ServerWorld world
-                                serverPlayer, // ServerPlayerEntity user
-                                (item) -> {} // Additional break logic lambda
+                        activeStack.damage( 1, serverWorld, serverPlayer, (item) -> {}
                         );
                     }
                 }
-                // ---------------------------------------------
 
-                // ⚔️ AXE DISABLE SHIELD/WEAPON LOGIC
+                // Axe Disable Shield Logic
                 if (attacker instanceof LivingEntity livingAttacker) {
-                    // Check if the attacker is holding a recognized axe
+
                     if (livingAttacker.getMainHandStack().isIn(ItemTags.AXES)) {
 
                         if (!world.isClient()) {
-
-                            // *** MODIFIED LOGIC: Apply cooldown to the active item's ItemCooldownManager ***
                             player.getItemCooldownManager().set(player.getActiveItem(), AXE_COOLDOWN_DURATION);
 
-                            // 🛑 FIX: Cancel the block animation/use action on the server
                             if (player instanceof ServerPlayerEntity serverPlayer) {
                                 serverPlayer.stopUsingItem();
                             }
@@ -245,7 +213,6 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                                     1.0F, 0.8F + world.random.nextFloat() * 0.4F);
                         }
 
-                        // Return the reduced/zero damage amount after durability damage and cooldown are applied
                         if (isParryShield) {
                             return 0.0F;
                         } else if (isWeaponItem) {
@@ -254,11 +221,8 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                     }
                 }
             }
-            // ------------------------------------
-
-            // Standard Block Reduction Logic (runs if not disabled by axe)
+            // Standard Block Reduction Logic
             if (isParryShield) {
-                // ✅ Parry Shield: BLOCK 100% of damage
                 world.playSound(
                         null, player.getX(), player.getY(), player.getZ(),
                         SoundEvents.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, // Standard Shield Block Sound
@@ -266,8 +230,7 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                 );
                 return 0.0F;
 
-            } else if (isWeaponItem) { // Added explicit check for WeaponItem
-                // ⚔️ WeaponItem: BLOCK 50% of damage
+            } else if (isWeaponItem) {
                 world.playSound(
                         null, player.getX(), player.getY(), player.getZ(),
                         SoundEvents.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS, // Weapon Block Sound
@@ -276,14 +239,10 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                 return originalAmount * 0.5F;
             }
         }
-
-        // Return original amount if in the parry window (2A handles full cancellation)
         return originalAmount;
     }
 
-
-
-    // 3. SUPPRESS FLINCH (Prevents flinching on successful block)
+    // --- 3. SUPPRESS FLINCH & KNOCKBACK---
     @Inject(
             method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
             at = @At("RETURN"),
@@ -304,7 +263,6 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         }
     }
 
-    // 4. SUPPRESS FLINCH KNOCKBACK (Prevents knockback on block)
     @Inject(
             method = "takeKnockback(DDD)V",
             at = @At("HEAD"),
@@ -321,9 +279,7 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         }
     }
 
-
-
-    // 5. COUNTER ATTACK DAMAGE (1.5x damage against parried-stunned targets)
+    // --- 5. COUNTER ATTACK ---
     @ModifyVariable(
             method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
             at = @At(value = "HEAD"),
@@ -350,9 +306,6 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         return originalAmount * COUNTER_MULTIPLIER;
     }
 
-
-
-    // 6. COUNTER ATTACK PARTICLES
     @Inject(
             method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
             at = @At(value = "RETURN", ordinal = 1)
@@ -382,16 +335,8 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
             ServerWorld serverWorld = (ServerWorld) world;
 
             // Spawn many CRIT particles
-            serverWorld.spawnParticles(
-                    ParticleTypes.CRIT,
-                    target.getX(),
-                    target.getBodyY(0.9D),
-                    target.getZ(),
-                    10, // Count of particles
-                    0.5D, // Spread X
-                    0.5D, // Spread Y
-                    0.5D, // Spread Z
-                    0.1D  // Speed
+            serverWorld.spawnParticles(ParticleTypes.CRIT, target.getX(), target.getBodyY(0.9D), target.getZ(),
+                    10, 0.5D, 0.5D, 0.5D, 0.1D
             );
         }
     }
