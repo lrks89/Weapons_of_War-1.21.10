@@ -28,7 +28,7 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-// Set a high priority to ensure this mixin runs before others that might interfere
+
 @Mixin(value = LivingEntity.class, priority = 1001)
 public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
 
@@ -79,32 +79,30 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
     }
 
 
-    // 1. BLOCKING CHECK (Ensures custom items enable the vanilla blocking animation/mechanic)
+
+    // 1. BLOCKING CHECK (Enables Blocking for WeaponItem)
     @Inject(method = "isBlocking", at = @At("HEAD"), cancellable = true)
     private void wowmod_checkCustomBlock(CallbackInfoReturnable<Boolean> cir) {
         if (!((Object)this instanceof PlayerEntity player)) { return; }
 
         if (player.isUsingItem()) {
 
-            ItemStack activeStack = player.getActiveItem();
-            Item activeItem = activeStack.getItem(); // Keep this for the 'instanceof' checks
+            // Check if the item is one of our custom blocking items (Weapon or ParryShield
+            if (player.getActiveItem().getItem() instanceof WeaponItem
+                    || player.getActiveItem().getItem() instanceof ParryShieldItem) {
 
-            // Check if the item is one of our custom blocking items (Weapon or ParryShield)
-            boolean isCustomBlockItem = (activeItem instanceof WeaponItem ||
-                    activeItem instanceof ParryShieldItem);
 
-            // --- THE CRITICAL FIX ---
-            // Pass the ItemStack (activeStack) instead of the Item (activeItem)
-            boolean isOnCooldown = player.getItemCooldownManager().isCoolingDown(activeStack);
-            // ------------------------
 
-            // If it's a custom blocking item, the use action is BLOCK, AND it is NOT on cooldown, then return true.
-            if (isCustomBlockItem && activeStack.getUseAction() == UseAction.BLOCK && !isOnCooldown) {
-                cir.setReturnValue(true);
-                cir.cancel();
+
+                if (player.getActiveItem().getUseAction() == UseAction.BLOCK) {
+                    cir.setReturnValue(true);
+                    cir.cancel();
+                }
             }
         }
     }
+
+
 
     // 2A. PERFECT PARRY and PARRIED STUN MECHANICS (Handles damage cancellation and parry effects)
     // NOTE: AXE CHECK IS NOT HERE. A PERFECT PARRY ALWAYS WORKS.
@@ -174,6 +172,8 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         }
     }
 
+
+
     // 2B. REGULAR BLOCK MECHANICS (Differentiates between Shield 100% and Weapon 50% block)
     // AXE CHECK IS HERE - IT ONLY AFFECTS THE REGULAR BLOCK
     @ModifyVariable(
@@ -197,7 +197,8 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         if (timeDelta > PARRY_WINDOW_TICKS) {
 
             Entity attacker = source.getAttacker();
-            Item activeItem = player.getActiveItem().getItem();
+            ItemStack activeStack = player.getActiveItem(); // Get the ItemStack here
+            Item activeItem = activeStack.getItem();
 
             // DECLARE AND INITIALIZE THE VARIABLES HERE
             boolean isParryShield = activeItem instanceof ParryShieldItem;
@@ -213,7 +214,7 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                     ServerWorld serverWorld = (ServerWorld) world;
                     // Check if it's a ServerPlayerEntity before casting and damaging
                     if (player instanceof ServerPlayerEntity serverPlayer) {
-                        player.getActiveItem().damage(
+                        activeStack.damage( // Use the activeStack here
                                 1, // int amount
                                 serverWorld, // ServerWorld world
                                 serverPlayer, // ServerPlayerEntity user
@@ -232,6 +233,11 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
 
                             // *** MODIFIED LOGIC: Apply cooldown to the active item's ItemCooldownManager ***
                             player.getItemCooldownManager().set(player.getActiveItem(), AXE_COOLDOWN_DURATION);
+
+                            // 🛑 FIX: Cancel the block animation/use action on the server
+                            if (player instanceof ServerPlayerEntity serverPlayer) {
+                                serverPlayer.stopUsingItem();
+                            }
 
                             world.playSound(
                                     null, player.getX(), player.getY(), player.getZ(),
@@ -275,6 +281,8 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         return originalAmount;
     }
 
+
+
     // 3. SUPPRESS FLINCH (Prevents flinching on successful block)
     @Inject(
             method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
@@ -313,6 +321,8 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         }
     }
 
+
+
     // 5. COUNTER ATTACK DAMAGE (1.5x damage against parried-stunned targets)
     @ModifyVariable(
             method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
@@ -339,6 +349,8 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         final float COUNTER_MULTIPLIER = 1.5F;
         return originalAmount * COUNTER_MULTIPLIER;
     }
+
+
 
     // 6. COUNTER ATTACK PARTICLES
     @Inject(
