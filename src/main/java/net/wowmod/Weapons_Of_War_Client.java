@@ -6,6 +6,5 @@ public class Weapons_Of_War_Client implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-
     }
 }
