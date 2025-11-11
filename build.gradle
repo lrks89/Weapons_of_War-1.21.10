@@ -37,6 +37,13 @@ repositories {
             includeGroup('software.bernie.geckolib')
         }
     }
+
+    //Player Animation Library
+    mavenCentral()
+    maven {
+        name = "RedlanceMinecraft"
+        url = "https://repo.redlance.org/public"
+    }
 }
 
 fabricApi {
@@ -63,6 +70,9 @@ dependencies {
 
     //GeckoLib
     modImplementation "software.bernie.geckolib:geckolib-fabric-1.21.10:5.3-alpha-3"
+
+    //Player Animation Library
+    modImplementation "com.zigythebird.playeranim:PlayerAnimationLibFabric:$project.pal_version"
 }
 
 processResources {
