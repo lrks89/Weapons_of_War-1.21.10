@@ -33,6 +33,7 @@
 		"minecraft": "~1.21.10",
 		"java": ">=21",
 		"geckolib": ">=5.3-alpha-3",
+        "player_animation_library": "=1.1.0+alpha.1+mc.1.21.9",
 		"fabric-api": "*"
 	},
 	"suggests": {

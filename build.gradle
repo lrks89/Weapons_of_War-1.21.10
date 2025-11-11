@@ -72,7 +72,7 @@ dependencies {
     modImplementation "software.bernie.geckolib:geckolib-fabric-1.21.10:5.3-alpha-3"
 
     //Player Animation Library
-    modImplementation "com.zigythebird.playeranim:PlayerAnimationLibFabric:$project.pal_version"
+    modImplementation "com.zigythebird.playeranim:PlayerAnimationLibFabric:1.1.0+alpha.1+mc.1.21.9"
 }
 
 processResources {
