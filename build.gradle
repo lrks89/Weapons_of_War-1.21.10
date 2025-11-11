@@ -26,9 +26,16 @@ repositories {
         url = "https://maven.terraformersmc.com/"}
 
     //GeckoLib
-    maven {
-        url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
-
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'GeckoLib'
+                url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+            }
+        }
+        filter {
+            includeGroup('software.bernie.geckolib')
+        }
     }
 }
 
