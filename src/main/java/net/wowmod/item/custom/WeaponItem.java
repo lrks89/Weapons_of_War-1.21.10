@@ -2,16 +2,18 @@ package net.wowmod.item.custom;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.CrossbowItem; // ADDED
+import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.ShieldItem; // ADDED
-import net.minecraft.item.TridentItem; // ADDED
+import net.minecraft.item.ShieldItem;
+import net.minecraft.item.TridentItem;
 import net.minecraft.item.consume.UseAction;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 import net.wowmod.util.IParryPlayer;
+// This import is still needed
+import net.wowmod.item.custom.ParryShieldItem;
 
 public class WeaponItem extends Item {
     // --- Blocking / Parrying Mechanics ---
@@ -41,9 +43,6 @@ public class WeaponItem extends Item {
             ItemStack offhandStack = player.getStackInHand(Hand.OFF_HAND);
             Item offhandItem = offhandStack.getItem();
 
-            // 1. Check if the offhand item is a high-priority vanilla item (Shield, Trident, Crossbow).
-            // 2. OR, check if the offhand item is a custom WeaponItem.
-            //    If either is true, return PASS to give the offhand slot priority.
             if (offhandItem instanceof ShieldItem ||
                     offhandItem instanceof TridentItem ||
                     offhandItem instanceof CrossbowItem ||
@@ -54,10 +53,8 @@ public class WeaponItem extends Item {
             }
         }
         // --- END PRIORITY CHECK ---
-
         ItemStack itemStack = player.getStackInHand(hand);
 
-        // Check weapon cooldown (parry debounce)
         if (player.getItemCooldownManager().isCoolingDown(itemStack)) {
             return ActionResult.PASS;
         }
@@ -68,6 +65,7 @@ public class WeaponItem extends Item {
         if (!world.isClient()) {
             // Server-side logic for setting the parry window and applying cooldown
             ((IParryPlayer) player).wowmod_setLastParryTime(world.getTime());
+
             player.getItemCooldownManager().set(itemStack, PARRY_COOLDOWN_TICKS);
         }
         return ActionResult.CONSUME;

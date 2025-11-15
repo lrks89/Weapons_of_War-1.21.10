@@ -7,10 +7,17 @@ import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.wowmod.WeaponsOfWar; // <-- We keep this import for the Logger
 
 public class ModItemGroups {
+
+    // REFINEMENT: Added a local MOD_ID to prevent potential static loading issues
+    // and for consistency with ModItems.java
+    public static final String MOD_ID = "wowmod";
+
     public static final ItemGroup WEAPONS_OF_WAR = FabricItemGroup.builder()
             .icon(() -> new ItemStack(ModItems.M1223A_LONGSWORD))
+            // This key is perfect, no change needed.
             .displayName(Text.translatable("itemGroup.wowmod.weapons_of_war"))
             .entries((context, entries) -> {
 
@@ -25,7 +32,12 @@ public class ModItemGroups {
             }).build();
 
     public static void initialize() {
-        // Since 1.21:
-        Registry.register(Registries.ITEM_GROUP, Identifier.of("wowmod", "wowmod"), WEAPONS_OF_WAR);
+        // This is fine, as initialize() is called *after* WeaponsOfWar is loaded
+        WeaponsOfWar.LOGGER.debug("Registering Mod Item Groups for " + MOD_ID);
+
+        // REFINEMENT: Use the local MOD_ID
+        Registry.register(Registries.ITEM_GROUP,
+                Identifier.of(MOD_ID, "weapons_of_war"),
+                WEAPONS_OF_WAR);
     }
 }

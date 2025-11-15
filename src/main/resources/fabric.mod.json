@@ -1,44 +1,44 @@
 {
-	"schemaVersion": 1,
-	"id": "weapons_of_war",
-	"version": "1.0",
-	"name": "Weapons_Of_War",
-	"description": "You can never enough weapons!",
-	"authors": [
-      "lrks89"
-	],
-	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
-	},
-	"license": "CC0-1.0",
-	"icon": "assets/wowmod/icon.png",
-	"environment": "*",
-	"entrypoints": {
-		"main": [
-			"net.wowmod.Weapons_Of_War"
-		],
-        "client": [
-            "net.wowmod.Weapons_Of_War_Client"
-        ],
-		"fabric-datagen": [
-			"net.wowmod.Weapons_Of_WarDataGenerator"
-		]
-	},
-	"mixins": [
-		"weapons_of_war.mixins.json"
-	],
-	"depends": {
-		"fabricloader": ">=0.17.3",
-		"minecraft": "~1.21.10",
-		"java": ">=21",
-		"geckolib": ">=5.3-alpha-3",
-        "player_animation_library": "=1.1.0+alpha.1+mc.1.21.9",
-		"fabric-api": "*"
-	},
-	"suggests": {
-		"another-mod": "*"
-	},
+  "schemaVersion": 1,
+  "id": "wowmod",
+  "version": "1.0",
+  "name": "WeaponsOfWar",
+  "description": "You can never enough weapons!",
+  "authors": [
+    "lrks89"
+  ],
+  "contact": {
+    "homepage": "https://fabricmc.net/",
+    "sources": "https://github.com/FabricMC/fabric-example-mod"
+  },
+  "license": "CC0-1.0",
+  "icon": "assets/wowmod/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "net.wowmod.WeaponsOfWar"
+    ],
+    "client": [
+      "net.wowmod.WeaponsOfWarClient"
+    ],
+    "fabric-datagen": [
+      "net.wowmod.WeaponsOfWarDataGenerator"
+    ]
+  },
+  "mixins": [
+    "wowmod.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.17.3",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "geckolib": ">=5.3-alpha-3",
+    "player_animation_library": "=1.1.0+alpha.1+mc.1.21.9",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "another-mod": "*"
+  },
   "custom": {
     "modmenu": {
       "update_checker": true
