@@ -70,34 +70,25 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
     // This mixin targets 'isBlocking', which is on LivingEntity
     @Inject(method = "isBlocking", at = @At("HEAD"), cancellable = true)
     private void wowmod_checkCustomBlock(CallbackInfoReturnable<Boolean> cir) {
-        // REFINEMENT: Added logging
-        LOGGER.info("[Mixin] isBlocking check running...");
 
         // We only want this logic to run for players
         if (!((Object)this instanceof PlayerEntity player)) {
             return;
         }
-        LOGGER.info("[Mixin] Entity is a player.");
 
         if (player.isUsingItem()) {
-            LOGGER.info("[Mixin] Player is using item: " + player.getActiveItem().getItem());
 
             // Check if the item is one of our custom blocking items
             if (player.getActiveItem().getItem() instanceof WeaponItem
                     || player.getActiveItem().getItem() instanceof ParryShieldItem) {
 
-                LOGGER.info("[Mixin] Player is holding a custom weapon/shield.");
-
                 if (player.getActiveItem().getUseAction() == UseAction.BLOCK) {
-                    LOGGER.info("[Mixin] SUCCESS: UseAction is BLOCK. Setting isBlocking=true.");
                     cir.setReturnValue(true);
                     cir.cancel();
                 } else {
-                    LOGGER.info("[Mixin] FAILED: UseAction is NOT BLOCK. (Is getUseAction overridden in your item class?)");
                 }
             }
         } else {
-            LOGGER.info("[Mixin] Player is NOT using item.");
         }
     }
 

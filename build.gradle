@@ -32,20 +32,19 @@ repositories {
         forRepository {
             maven {
                 name = 'GeckoLib'
-                url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
-            }
+                url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'}
         }
         filter {
-            includeGroup('software.bernie.geckolib')
-        }
+            includeGroup('software.bernie.geckolib')}
     }
 
     //Player Animation Library
     mavenCentral()
     maven {
         name = "RedlanceMinecraft"
-        url = "https://repo.redlance.org/public"
-    }
+        url = "https://repo.redlance.org/public"}
+    maven {
+        url = 'https://maven.kosmx.dev' }
 }
 
 fabricApi {

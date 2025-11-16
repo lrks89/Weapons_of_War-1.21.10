@@ -75,15 +75,12 @@ public abstract class PlayerEntityBlockingMixin implements IParryPlayer {
             float originalAmount,
             CallbackInfoReturnable<Boolean> cir
     ) {
-        LOGGER.info("[Mixin] damage() mixin running..."); // REFINEMENT: Added log
         PlayerEntity player = (PlayerEntity) (Object) this;
 
         if (!player.isBlocking()) {
-            LOGGER.info("[Mixin] FAILED: Player is not blocking."); // REFINEMENT: Added log
             return;
         }
 
-        LOGGER.info("[Mixin] SUCCESS: Player is blocking!"); // REFINEMENT: Added log
         IParryPlayer parryPlayer = (IParryPlayer) player;
         long timeDelta = serverWorld.getTime() - parryPlayer.wowmod_getLastParryTime();
 
@@ -217,7 +214,6 @@ public abstract class PlayerEntityBlockingMixin implements IParryPlayer {
 
                         // --- REFINEMENT: Shield break logic (knockback removed) ---
                         if (isParryShield) {
-                            LOGGER.info("[Mixin] Shield broken, stopping use."); // Changed log
 
                             // We still need to stop the player from using the shield
                             if (player instanceof ServerPlayerEntity serverPlayer) {
