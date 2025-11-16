@@ -64,12 +64,12 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
     //Cloth Config
-    modApi("me.shedaniel.cloth:cloth-config-fabric:20.0.149") {
+    modApi("me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}") {
         exclude(group: "net.fabricmc.fabric-api")}
 
     //Mod Menu & Mod Menu Badges
-    modImplementation("com.terraformersmc:modmenu:16.0.0-rc.1")
-    include(modImplementation("maven.modrinth:modmenu-badges-lib:2025.6.1"))
+    modImplementation("com.terraformersmc:modmenu:${project.mod_menu_version}")
+    include(modImplementation("maven.modrinth:modmenu-badges-lib:${project.mod_menu_badges_version}"))
 
     //GeckoLib
     modImplementation "software.bernie.geckolib:geckolib-fabric-${project.geckolib_version}"
