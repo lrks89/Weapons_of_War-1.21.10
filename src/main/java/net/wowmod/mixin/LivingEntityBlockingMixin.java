@@ -108,7 +108,6 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
             // REFINEMENT: Simplified logic.
             // If the player is blocking with one of our items, cancel ALL knockback.
             if (player.isBlocking()) {
-                LOGGER.info("[Mixin] Canceling knockback.");
                 ci.cancel();
             }
         }
