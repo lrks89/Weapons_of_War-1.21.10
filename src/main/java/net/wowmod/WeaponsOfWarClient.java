@@ -1,15 +1,19 @@
-// Make sure to rename the file to "WeaponsOfWarClient.java"
 package net.wowmod;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+import net.minecraft.resource.ResourceType;
+import net.wowmod.animation.AnimationLoader;
+import net.wowmod.animation.WeaponConfigLoader;
 
-// Refinement 1: Class name changed to UpperCamelCase
 public class WeaponsOfWarClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        // This is where you will register client-only things
-        // like custom entity renderers, particle factories,
-        // and keybindings in the future.
+        // Register the Animation Loader (Loads the .json files from assets)
+        ResourceManagerHelper.get(ResourceType.CLIENT_RESOURCES).registerReloadListener(new AnimationLoader());
+
+        // Register the Weapon Config Loader (Loads the .json files from data)
+        ResourceManagerHelper.get(ResourceType.CLIENT_RESOURCES).registerReloadListener(new WeaponConfigLoader());
     }
 }

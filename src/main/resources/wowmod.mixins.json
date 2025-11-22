@@ -3,8 +3,12 @@
   "package": "net.wowmod.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ClientSwingMixin",
     "LivingEntityBlockingMixin",
-    "PlayerEntityBlockingMixin"
+    "PlayerModelMixin",
+    "PlayerEntityBlockingMixin",
+    "PlayerRendererMixin",
+    "PlayerStateMixin"
   ],
   "injectors": {
     "defaultRequire": 1

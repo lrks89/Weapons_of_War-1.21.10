@@ -6,7 +6,6 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.consume.UseAction;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.registry.tag.ItemTags;
@@ -18,7 +17,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.wowmod.WeaponsOfWar; // REFINEMENT: Added import for Logger
 import net.wowmod.item.custom.ParryShieldItem;
-import net.wowmod.item.custom.WeaponItem;
+import net.wowmod.item.custom.ParryWeaponItem;
 import net.wowmod.util.IParryPlayer;
 import net.wowmod.util.IParryStunnedEntity;
 import org.slf4j.Logger; // REFINEMENT: Added import for Logger
@@ -27,7 +26,6 @@ import org.spongepowered.asm.mixin.Unique; // REFINEMENT: Added import
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 
@@ -170,7 +168,7 @@ public abstract class PlayerEntityBlockingMixin implements IParryPlayer {
             Item activeItem = activeStack.getItem();
 
             boolean isParryShield = activeItem instanceof ParryShieldItem;
-            boolean isWeaponItem = activeItem instanceof WeaponItem;
+            boolean isWeaponItem = activeItem instanceof ParryWeaponItem;
 
             if (isParryShield || isWeaponItem) {
 

@@ -1,0 +1,7 @@
+{
+  "idle": "wowmod:player_animations/polearm_one_handed_idle.json",
+  "walk": "wowmod:player_animations/polearm_one_handed_walking.json",
+  "sprint": "wowmod:player_animations/polearm_one_handed_sprinting.json",
+  "sneak": "wwowmod:player_animations/default_sneaking.json",
+  "attack": "wowmod:player_animations/polearm_one_handed_thrust.json"
+}

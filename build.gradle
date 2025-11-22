@@ -43,8 +43,6 @@ repositories {
     maven {
         name = "RedlanceMinecraft"
         url = "https://repo.redlance.org/public"}
-    maven {
-        url = 'https://maven.kosmx.dev' }
 }
 
 fabricApi {

@@ -5,7 +5,6 @@ import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroupEntries;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroups;
-import net.minecraft.item.ToolMaterial; // <-- This is the one we fixed
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 // REFINEMENT: Added imports for the correct registration pattern
@@ -14,6 +13,7 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.util.Identifier;
 import net.wowmod.WeaponsOfWar;
 import net.wowmod.item.custom.ParryShieldItem;
+import net.wowmod.item.custom.ParryWeaponItem;
 import net.wowmod.item.custom.WeaponItem;
 // REFINEMENT: Added import for the registration pattern
 import java.util.function.Function;
@@ -25,16 +25,16 @@ public class ModItems {
 
     // REFINEMENT: Changed to the crash-proof registration pattern
     public static final Item M1113A_DAGGER = registerItem("m1113a_dagger",
-            WeaponItem::new, new Item.Settings().sword(ModToolMaterials.IRON_WEAPONS, -1, -2.0f));
+            ParryWeaponItem::new, new Item.Settings().sword(ModToolMaterials.IRON_WEAPONS, -1, -2.0f));
 
     public static final Item M1213A_SHORTSWORD = registerItem("m1213a_shortsword",
-            WeaponItem::new, new Item.Settings().sword(ModToolMaterials.IRON_WEAPONS, 0, -2.4f));
+            ParryWeaponItem::new, new Item.Settings().sword(ModToolMaterials.IRON_WEAPONS, 0, -2.4f));
 
     public static final Item M1223A_LONGSWORD = registerItem("m1223a_longsword",
-            WeaponItem::new, new Item.Settings().sword(ModToolMaterials.IRON_WEAPONS, 1, -2.8f));
+            ParryWeaponItem::new, new Item.Settings().sword(ModToolMaterials.IRON_WEAPONS, 1, -2.8f));
 
     public static final Item M1513A_GREATSWORD = registerItem("m1513a_greatsword",
-            WeaponItem::new, new Item.Settings().sword(ModToolMaterials.IRON_WEAPONS, 2, -3.0f));
+            ParryWeaponItem::new, new Item.Settings().sword(ModToolMaterials.IRON_WEAPONS, 2, -3.0f));
 
     public static final Item M2613A_SPEAR = registerItem("m2613a_spear",
             WeaponItem::new, new Item.Settings().sword(ModToolMaterials.IRON_WEAPONS, 0, -2.6f));

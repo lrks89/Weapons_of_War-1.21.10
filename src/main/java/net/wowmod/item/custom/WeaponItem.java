@@ -2,72 +2,55 @@ package net.wowmod.item.custom;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.CrossbowItem;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.ShieldItem;
-import net.minecraft.item.TridentItem;
-import net.minecraft.item.consume.UseAction;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
-import net.wowmod.util.IParryPlayer;
-// This import is still needed
-import net.wowmod.item.custom.ParryShieldItem;
+import net.wowmod.animation.PlayerAnimationManager;
+import net.wowmod.animation.WeaponAnimationSet;
+import net.wowmod.animation.WeaponConfigLoader;
 
-public class WeaponItem extends Item {
-    // --- Blocking / Parrying Mechanics ---
-    private static final int PARRY_COOLDOWN_TICKS = 10; //0.5 second cooldown
+public class WeaponItem extends ParryWeaponItem {
 
     public WeaponItem(Settings settings) {
         super(settings);
     }
 
-    // Applies Blocking Mechanic to WeaponItems
-    @Override
-    public UseAction getUseAction(ItemStack stack) {
-        return UseAction.BLOCK;
+    public WeaponAnimationSet getAnimations() {
+        return WeaponConfigLoader.get(this);
     }
 
     @Override
-    public int getMaxUseTime(ItemStack stack, LivingEntity user) {
-        // Keeping this high so the player can block indefinitely
-        return 72000;
-    }
+    // 1. FIX: Change return type from 'boolean' to 'void'
+    public void postHit(ItemStack stack, LivingEntity target, LivingEntity attacker) {
+        // 1. Check if it is a Player first (safer)
+        if (attacker instanceof PlayerEntity player) {
 
-    @Override
-    public ActionResult use(World world, PlayerEntity player, Hand hand) {
+            // 2. Use the working world accessor (getEntityWorld() confirmed by you)
+            World world = player.getEntityWorld();
 
-        // --- UPDATED PRIORITY CHECK FOR OFFHAND ITEMS ---
-        if (hand == Hand.MAIN_HAND) {
-            ItemStack offhandStack = player.getStackInHand(Hand.OFF_HAND);
-            Item offhandItem = offhandStack.getItem();
-
-            if (offhandItem instanceof ShieldItem ||
-                    offhandItem instanceof TridentItem ||
-                    offhandItem instanceof CrossbowItem ||
-                    offhandItem instanceof WeaponItem ||
-                    offhandItem instanceof ParryShieldItem) {
-
-                return ActionResult.PASS;
+            if (world.isClient()) {
+                playAttackAnimation(player);
             }
         }
-        // --- END PRIORITY CHECK ---
-        ItemStack itemStack = player.getStackInHand(hand);
 
-        if (player.getItemCooldownManager().isCoolingDown(itemStack)) {
-            return ActionResult.PASS;
+        super.postHit(stack, target, attacker);
+        // REMOVED: return true;
+    }
+
+    @Override
+    // 2. FIX: Remove the <ItemStack> type parameter from ActionResult
+    public ActionResult use(World world, PlayerEntity user, Hand hand) {
+        if (world.isClient()) {
+            playAttackAnimation(user);
         }
+        return super.use(world, user, hand);
+    }
 
-        // Start the blocking/parry animation
-        player.setCurrentHand(hand);
-
-        if (!world.isClient()) {
-            // Server-side logic for setting the parry window and applying cooldown
-            ((IParryPlayer) player).wowmod_setLastParryTime(world.getTime());
-
-            player.getItemCooldownManager().set(itemStack, PARRY_COOLDOWN_TICKS);
+    private void playAttackAnimation(PlayerEntity player) {
+        WeaponAnimationSet anims = getAnimations();
+        if (anims != null && anims.attackAnim() != null) {
+            PlayerAnimationManager.playAnimation(player, anims.attackAnim());
         }
-        return ActionResult.CONSUME;
     }
 }

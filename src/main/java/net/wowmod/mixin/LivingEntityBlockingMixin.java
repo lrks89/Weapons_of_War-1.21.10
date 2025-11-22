@@ -8,7 +8,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.Vec3d;
 import net.wowmod.WeaponsOfWar; // REFINEMENT: Added import for Logger
 import net.wowmod.item.custom.ParryShieldItem;
-import net.wowmod.item.custom.WeaponItem;
+import net.wowmod.item.custom.ParryWeaponItem;
 import net.wowmod.util.IParryStunnedEntity;
 import org.slf4j.Logger; // REFINEMENT: Added import for Logger
 import org.spongepowered.asm.mixin.Mixin;
@@ -79,7 +79,7 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
         if (player.isUsingItem()) {
 
             // Check if the item is one of our custom blocking items
-            if (player.getActiveItem().getItem() instanceof WeaponItem
+            if (player.getActiveItem().getItem() instanceof ParryWeaponItem
                     || player.getActiveItem().getItem() instanceof ParryShieldItem) {
 
                 if (player.getActiveItem().getUseAction() == UseAction.BLOCK) {
