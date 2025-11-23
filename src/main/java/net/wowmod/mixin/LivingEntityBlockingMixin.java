@@ -6,11 +6,11 @@ import net.minecraft.item.consume.UseAction;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.Vec3d;
-import net.wowmod.WeaponsOfWar; // REFINEMENT: Added import for Logger
+import net.wowmod.WeaponsOfWar;
 import net.wowmod.item.custom.ParryShieldItem;
 import net.wowmod.item.custom.ParryWeaponItem;
 import net.wowmod.util.IParryStunnedEntity;
-import org.slf4j.Logger; // REFINEMENT: Added import for Logger
+import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -21,7 +21,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(value = LivingEntity.class, priority = 1001)
 public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
 
-    // REFINEMENT: Added Logger
     @Unique
     private static final Logger LOGGER = WeaponsOfWar.LOGGER;
 
@@ -85,10 +84,8 @@ public abstract class LivingEntityBlockingMixin implements IParryStunnedEntity {
                 if (player.getActiveItem().getUseAction() == UseAction.BLOCK) {
                     cir.setReturnValue(true);
                     cir.cancel();
-                } else {
                 }
             }
-        } else {
         }
     }
 

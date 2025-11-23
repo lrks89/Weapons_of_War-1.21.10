@@ -13,12 +13,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(PlayerEntityRenderer.class)
 public class PlayerRendererMixin {
 
-    /**
-     * FIX: Changed the first parameter to 'Object' with @Coerce.
-     * The game version 1.21.10 uses a specific internal class 'PlayerLikeEntity' for the renderer
-     * that is causing descriptor mismatches. Using 'Object' + @Coerce creates a universal wildcard
-     * that bypasses the strict type check entirely.
-     */
     @Inject(method = "updateRenderState", at = @At("RETURN"))
     private void wowmod_capturePlayerReference(@Coerce Object playerObj, PlayerEntityRenderState state, float tickDelta, CallbackInfo ci) {
         // We safely cast the Object back to PlayerEntity inside the method body.

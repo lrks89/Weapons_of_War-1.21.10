@@ -15,29 +15,27 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.entity.projectile.ProjectileEntity;
-import net.wowmod.WeaponsOfWar; // REFINEMENT: Added import for Logger
+import net.wowmod.WeaponsOfWar;
 import net.wowmod.item.custom.ParryShieldItem;
 import net.wowmod.item.custom.ParryWeaponItem;
 import net.wowmod.util.IParryPlayer;
 import net.wowmod.util.IParryStunnedEntity;
-import org.slf4j.Logger; // REFINEMENT: Added import for Logger
+import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique; // REFINEMENT: Added import
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 
-// REFINEMENT: The mixin must implement the interface it's adding!
 @Mixin(PlayerEntity.class)
 public abstract class PlayerEntityBlockingMixin implements IParryPlayer {
 
-    // REFINEMENT: Added Logger
     @Unique
     private static final Logger LOGGER = WeaponsOfWar.LOGGER;
 
-    // --- REFINEMENT: Added the fields and methods for IParryPlayer ---
+    // --- IParryPlayer implementation ---
     @Unique
     private long wowmod_lastParryTime = 0L;
 
@@ -52,7 +50,7 @@ public abstract class PlayerEntityBlockingMixin implements IParryPlayer {
     }
     // --- End IParryPlayer implementation ---
 
-    // --- CONSTANTS (moved from other class) ---
+    // --- CONSTANTS ---
     private static final int PARRY_WINDOW_TICKS = 5;
     private static final int PARRIED_STUN_DURATION = 20; // 1 second
     private static final int AXE_COOLDOWN_DURATION = 100; // 5 seconds (20 ticks per second)
@@ -61,7 +59,6 @@ public abstract class PlayerEntityBlockingMixin implements IParryPlayer {
     // REFINEMENT: This mixin was moved to LivingEntityBlockingMixin
 
     // --- 2A. PERFECT PARRY and PARRIED STUN MECHANICS ---
-    // This mixin is fine, as it targets a method on PlayerEntity
     @Inject(
             method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
             at = @At(value = "HEAD"),
@@ -131,7 +128,6 @@ public abstract class PlayerEntityBlockingMixin implements IParryPlayer {
     }
 
     // --- 2B. REGULAR BLOCK & 5. COUNTER ATTACK ---
-    // This mixin is fine, as it targets a method on PlayerEntity
     @ModifyVariable(
             method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
             at = @At(value = "HEAD"),
@@ -175,7 +171,6 @@ public abstract class PlayerEntityBlockingMixin implements IParryPlayer {
                 // Damage the item
                 if (!world.isClient() && !source.isIn(DamageTypeTags.BYPASSES_SHIELD)) {
                     if (player instanceof ServerPlayerEntity serverPlayer) {
-                        // REFINEMENT 2: Fixed variable name from 'serverWorld' to 'world'
                         activeStack.damage( 1, world, serverPlayer, (item) -> {}
                         );
                     }
@@ -252,7 +247,6 @@ public abstract class PlayerEntityBlockingMixin implements IParryPlayer {
     // REFINEMENT: This mixin was moved to LivingEntityBlockingMixin
 
     // --- 5B. COUNTER ATTACK PARTICLES ---
-    // This mixin is fine, as it targets a method on PlayerEntity
     @Inject(
             method = "damage(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/damage/DamageSource;F)Z",
             at = @At(value = "RETURN", ordinal = 1)

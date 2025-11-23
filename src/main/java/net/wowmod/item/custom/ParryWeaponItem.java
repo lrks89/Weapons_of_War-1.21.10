@@ -12,8 +12,6 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 import net.wowmod.util.IParryPlayer;
-// This import is still needed
-
 
 public class ParryWeaponItem extends Item {
     // --- Blocking / Parrying Mechanics ---

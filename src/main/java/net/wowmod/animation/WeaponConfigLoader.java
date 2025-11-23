@@ -18,7 +18,6 @@ public class WeaponConfigLoader implements SynchronousResourceReloader, Identifi
     public static final Map<Identifier, WeaponAnimationSet> WEAPON_CONFIGS = new HashMap<>();
     private static final Gson GSON = new Gson();
 
-    // Folder in assets/wowmod/
     private static final String DATA_FOLDER = "weapon_data";
 
     @Override
@@ -41,10 +40,8 @@ public class WeaponConfigLoader implements SynchronousResourceReloader, Identifi
                 Identifier sneak = json.has("sneak") ? Identifier.of(json.get("sneak").getAsString()) : null;
                 Identifier attack = json.has("attack") ? Identifier.of(json.get("attack").getAsString()) : null;
 
-                // Calculate Item ID from filename
                 String namespace = id.getNamespace();
-                String path = id.getPath(); // e.g., "weapon_data/m2613a_spear.json"
-
+                String path = id.getPath();
                 // Extract name: remove "weapon_data/" (12 chars) and ".json" (5 chars)
                 String itemName = path.substring(DATA_FOLDER.length() + 1, path.length() - 5);
                 Identifier itemId = Identifier.of(namespace, itemName);
@@ -66,9 +63,6 @@ public class WeaponConfigLoader implements SynchronousResourceReloader, Identifi
     public static WeaponAnimationSet get(Item item) {
         Identifier id = Registries.ITEM.getId(item);
         WeaponAnimationSet set = WEAPON_CONFIGS.get(id);
-        if (set == null) {
-            // Rate-limited debug warning could go here, but keeping it clean for now
-        }
         return set;
     }
 }

@@ -21,25 +21,17 @@ public class WeaponItem extends ParryWeaponItem {
     }
 
     @Override
-    // 1. FIX: Change return type from 'boolean' to 'void'
     public void postHit(ItemStack stack, LivingEntity target, LivingEntity attacker) {
-        // 1. Check if it is a Player first (safer)
         if (attacker instanceof PlayerEntity player) {
-
-            // 2. Use the working world accessor (getEntityWorld() confirmed by you)
             World world = player.getEntityWorld();
-
             if (world.isClient()) {
                 playAttackAnimation(player);
             }
         }
-
         super.postHit(stack, target, attacker);
-        // REMOVED: return true;
     }
 
     @Override
-    // 2. FIX: Remove the <ItemStack> type parameter from ActionResult
     public ActionResult use(World world, PlayerEntity user, Hand hand) {
         if (world.isClient()) {
             playAttackAnimation(user);

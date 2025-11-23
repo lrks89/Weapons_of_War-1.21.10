@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.UUID;
 
 public class PlayerAnimationManager {
-    // Maps Player UUID to current animation state
     private static final Map<UUID, AnimationState> activeAnimations = new HashMap<>();
 
     public static void playAnimation(PlayerEntity player, Identifier animationId) {

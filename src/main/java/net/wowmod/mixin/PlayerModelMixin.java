@@ -59,7 +59,7 @@ public abstract class PlayerModelMixin extends BipedEntityModel<PlayerEntityRend
 
         // 1. Capture Vanilla Bases
         float baseBodyY = ModelPartUtils.getY(this.body);
-        float baseHeadY = ModelPartUtils.getY(this.head);
+        float baseHeadY = ModelPartUtils.getY(this.head); // Unused currently but good for ref
         float baseLegZ = ModelPartUtils.getZ(this.rightLeg);
 
         // 2. SNEAK ADJUSTMENTS
@@ -72,7 +72,7 @@ public abstract class PlayerModelMixin extends BipedEntityModel<PlayerEntityRend
 
         // 3. Apply Animation Rotations
         applyRotation(animDef, "body", this.body, timePointer, true);
-        // Head rotation disabled
+        // Head rotation disabled to allow looking around
         applyRotation(animDef, "right_arm", this.rightArm, timePointer, false);
         applyRotation(animDef, "left_arm", this.leftArm, timePointer, false);
         applyRotation(animDef, "right_leg", this.rightLeg, timePointer, false);

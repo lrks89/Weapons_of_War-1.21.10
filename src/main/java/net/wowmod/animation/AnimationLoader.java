@@ -43,7 +43,6 @@ public class AnimationLoader implements SynchronousResourceReloader, Identifiabl
                 }
 
             } catch (Exception e) {
-                // Print the full error so we can see details in the log next time
                 WeaponsOfWar.LOGGER.error("Failed to load animation: " + id, e);
             }
         });
@@ -81,13 +80,10 @@ public class AnimationLoader implements SynchronousResourceReloader, Identifiabl
         if (json.has(key)) {
             JsonElement element = json.get(key);
 
-            // FIX 1: Handle Static Values (Array) - e.g., "position": [0.5, 0, 0.5]
             if (element.isJsonArray()) {
                 var arr = element.getAsJsonArray();
-                // Treat it as a keyframe at time 0.0
                 keyframes.put(0.0f, new Vec3d(arr.get(0).getAsDouble(), arr.get(1).getAsDouble(), arr.get(2).getAsDouble()));
             }
-            // FIX 2: Handle Keyframes (Object) - e.g., "position": { "0.0": [...] }
             else if (element.isJsonObject()) {
                 JsonObject keyframeData = element.getAsJsonObject();
                 keyframeData.keySet().forEach(timeStr -> {
@@ -99,9 +95,7 @@ public class AnimationLoader implements SynchronousResourceReloader, Identifiabl
                             var arr = kfElement.getAsJsonArray();
                             keyframes.put(time, new Vec3d(arr.get(0).getAsDouble(), arr.get(1).getAsDouble(), arr.get(2).getAsDouble()));
                         }
-                    } catch (NumberFormatException ignored) {
-                        // Ignore non-numeric keys
-                    }
+                    } catch (NumberFormatException ignored) {}
                 });
             }
         }
