@@ -5,5 +5,9 @@
   "item.wowmod.m1213a_shortsword": "Iron Shortsword",
   "item.wowmod.m1223a_longsword": "Iron Longsword",
   "item.wowmod.m1513a_greatsword": "Iron Greatsword",
-  "item.wowmod.m2613a_spear": "Iron Spear"
+  "item.wowmod.m2613a_spear": "Iron Spear",
+  "item.wowmod.test_shield": "Test Shield",
+
+  "attribute.name.entity_interaction_range": "Attack Range",
+  "attack_range": "Attack Range"
 }

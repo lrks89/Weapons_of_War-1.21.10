@@ -6,6 +6,5 @@ public record WeaponAnimationSet(
         Identifier idleAnim,
         Identifier walkAnim,
         Identifier sprintAnim,
-        Identifier sneak,
         Identifier attackAnim
 ) {}

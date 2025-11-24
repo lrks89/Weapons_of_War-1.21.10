@@ -37,7 +37,6 @@ public class WeaponConfigLoader implements SynchronousResourceReloader, Identifi
                 Identifier idle = json.has("idle") ? Identifier.of(json.get("idle").getAsString()) : null;
                 Identifier walk = json.has("walk") ? Identifier.of(json.get("walk").getAsString()) : null;
                 Identifier sprint = json.has("sprint") ? Identifier.of(json.get("sprint").getAsString()) : null;
-                Identifier sneak = json.has("sneak") ? Identifier.of(json.get("sneak").getAsString()) : null;
                 Identifier attack = json.has("attack") ? Identifier.of(json.get("attack").getAsString()) : null;
 
                 String namespace = id.getNamespace();
@@ -46,7 +45,7 @@ public class WeaponConfigLoader implements SynchronousResourceReloader, Identifi
                 String itemName = path.substring(DATA_FOLDER.length() + 1, path.length() - 5);
                 Identifier itemId = Identifier.of(namespace, itemName);
 
-                WEAPON_CONFIGS.put(itemId, new WeaponAnimationSet(idle, walk, sprint, sneak, attack));
+                WEAPON_CONFIGS.put(itemId, new WeaponAnimationSet(idle, walk, sprint, attack));
 
                 WeaponsOfWar.LOGGER.info("Loaded Weapon Config for Item: " + itemId);
 
