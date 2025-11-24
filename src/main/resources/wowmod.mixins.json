@@ -3,12 +3,16 @@
   "package": "net.wowmod.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ArmedEntityRenderStateMixin",
     "ClientSwingMixin",
+    "HeldItemFeatureRendererMixin",
+    "HeldItemRendererMixin",
     "LivingEntityBlockingMixin",
-    "PlayerModelMixin",
     "PlayerEntityBlockingMixin",
+    "PlayerModelMixin",
     "PlayerRendererMixin",
-    "PlayerStateMixin"
+    "PlayerStateMixin",
+    "PlayerWeaponDataMixin"
   ],
   "injectors": {
     "defaultRequire": 1

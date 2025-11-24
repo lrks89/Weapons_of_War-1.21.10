@@ -8,6 +8,7 @@ import net.wowmod.animation.PlayerAnimationManager.AnimationState;
 import net.wowmod.item.custom.ParryShieldItem;
 import net.wowmod.item.custom.WeaponItem;
 import net.wowmod.util.IPlayerStateExtension;
+import net.wowmod.util.IWeaponTransform;
 import net.wowmod.util.ModelPartUtils;
 import net.wowmod.WeaponsOfWar;
 
@@ -57,10 +58,13 @@ public abstract class PlayerModelMixin extends BipedEntityModel<PlayerEntityRend
         PlayerEntity player = extension.wowmod_getPlayer();
         if (player == null) return;
 
-        AnimationContext context = determineCurrentAnimation(player);
+        // Reset weapon transform default
+        if (player instanceof IWeaponTransform weaponData) {
+            weaponData.wowmod_setWeaponRotation(Vec3d.ZERO);
+            weaponData.wowmod_setWeaponPosition(Vec3d.ZERO);
+        }
 
-        // If context is null (e.g. blocking or sneaking), we return early.
-        // This allows the vanilla model logic (which ran before this injection) to persist.
+        AnimationContext context = determineCurrentAnimation(player);
         if (context == null || context.id() == null) return;
 
         AnimationDefinition animDef = AnimationLoader.ANIMATIONS.get(context.id());
@@ -75,33 +79,24 @@ public abstract class PlayerModelMixin extends BipedEntityModel<PlayerEntityRend
 
         // 2. SNEAK ADJUSTMENTS
         boolean isSneaking = player.isInSneakingPose();
-
         float sneakYOffset = isSneaking ? 3.2F : 0.0F;
         float sneakZOffset = isSneaking ? 3.0F : 0.0F;
         float sneakHeightFix = isSneaking ? -2.0F : 0.0F;
         float sneakHeadY = isSneaking ? 1.0F : 0.0F;
 
         // 3. Apply Animation Rotations
-
-        // Head & Headwear
         applyRotation(animDef, "head", this.head, timePointer, true);
         applyRotation(animDef, "headwear", this.hat, timePointer, true);
-
-        // Body & Jacket
         applyRotation(animDef, "body", this.body, timePointer, true);
         applyRotation(animDef, "jacket", this.jacket, timePointer, true);
 
-        // --- VANILLA ATTACK RESTORATION LOGIC ---
-
-        // Get the requested action state (e.g., "Attack")
+        // --- VANILLA ATTACK RESTORATION ---
         AnimationState activeState = PlayerAnimationManager.getState(player);
-
         boolean isPlayingAction = activeState != null && context.id().equals(activeState.id);
 
         boolean skipRightArm = false;
         boolean skipLeftArm = false;
 
-        // If we are NOT successfully playing a custom attack animation, AND the player is swinging...
         if (!isPlayingAction && player.handSwingProgress > 0) {
             if (player.preferredHand == Hand.MAIN_HAND) {
                 if (player.getMainArm() == Arm.RIGHT) skipRightArm = true;
@@ -112,23 +107,30 @@ public abstract class PlayerModelMixin extends BipedEntityModel<PlayerEntityRend
             }
         }
 
-        // Only apply custom arm animation if we aren't letting the vanilla swing happen
         if (!skipRightArm) {
             applyRotation(animDef, "right_arm", this.rightArm, timePointer, false);
-            applyRotation(animDef, "right_sleeve", this.rightSleeve, timePointer, false);
+            // No manual sleeve rotation/sync
         }
 
         if (!skipLeftArm) {
             applyRotation(animDef, "left_arm", this.leftArm, timePointer, false);
-            applyRotation(animDef, "left_sleeve", this.leftSleeve, timePointer, false);
         }
 
-        // Legs & Pants always animate
         applyRotation(animDef, "right_leg", this.rightLeg, timePointer, false);
-        applyRotation(animDef, "right_pants", this.rightPants, timePointer, false);
         applyRotation(animDef, "left_leg", this.leftLeg, timePointer, false);
-        applyRotation(animDef, "left_pants", this.leftPants, timePointer, false);
 
+        // --- WEAPON BONE LOGIC ---
+        if (player instanceof IWeaponTransform weaponData) {
+            if (animDef.bones().containsKey("weapon")) {
+                BoneAnimation weaponBone = animDef.bones().get("weapon");
+                if (weaponBone.rotationKeyframes() != null && !weaponBone.rotationKeyframes().isEmpty()) {
+                    weaponData.wowmod_setWeaponRotation(interpolate(weaponBone.rotationKeyframes(), timePointer));
+                }
+                if (weaponBone.positionKeyframes() != null && !weaponBone.positionKeyframes().isEmpty()) {
+                    weaponData.wowmod_setWeaponPosition(interpolate(weaponBone.positionKeyframes(), timePointer));
+                }
+            }
+        }
 
         // 4. HIP ANCHORING
         Vec3d anchorOffset = calculateHipAnchorOffset(this.body, sneakYOffset);
@@ -140,12 +142,15 @@ public abstract class PlayerModelMixin extends BipedEntityModel<PlayerEntityRend
 
         ModelPartUtils.setPivot(this.body, bodyFinalX, bodyFinalY, bodyFinalZ);
 
-        // 5. ATTACH LIMBS (Arms AND Legs)
+        // 5. LIMB POSITION SYNC
         syncLimbsToBody(this.body, this.head, this.rightArm, this.leftArm, this.rightLeg, this.leftLeg, sneakHeadY);
 
-        // 6. Apply Leg Positions (After Syncing)
+        // 6. Apply Leg Positions
         applyPosition(animDef, "right_leg", this.rightLeg, timePointer);
         applyPosition(animDef, "left_leg", this.leftLeg, timePointer);
+
+        // 7. SYNC CLOTHES REMOVED
+        // (Clothes will follow limbs via vanilla logic)
     }
 
     private void syncLimbsToBody(ModelPart body, ModelPart head, ModelPart rightArm, ModelPart leftArm, ModelPart rightLeg, ModelPart leftLeg, float sneakHeadY) {
@@ -153,26 +158,20 @@ public abstract class PlayerModelMixin extends BipedEntityModel<PlayerEntityRend
         float neckY = ModelPartUtils.getY(body);
         float neckZ = ModelPartUtils.getZ(body);
 
-        // --- Head ---
         ModelPartUtils.setPivot(head, neckX, neckY + sneakHeadY, neckZ);
 
-        // --- Arms ---
         Vec3d rShoulder = rotateVector(new Vec3d(-5, 2, 0), body.pitch, body.yaw, body.roll);
         Vec3d lShoulder = rotateVector(new Vec3d(5, 2, 0), body.pitch, body.yaw, body.roll);
-
         ModelPartUtils.setPivot(rightArm, neckX + (float)rShoulder.x, neckY + (float)rShoulder.y, neckZ + (float)rShoulder.z);
         ModelPartUtils.setPivot(leftArm, neckX + (float)lShoulder.x, neckY + (float)lShoulder.y, neckZ + (float)lShoulder.z);
 
-        // --- Legs ---
         Vec3d rLegPivot = rotateVector(new Vec3d(-1.9, 12, 0), body.pitch, body.yaw, body.roll);
         Vec3d lLegPivot = rotateVector(new Vec3d(1.9, 12, 0), body.pitch, body.yaw, body.roll);
-
         ModelPartUtils.setPivot(rightLeg, neckX + (float)rLegPivot.x, neckY + (float)rLegPivot.y, neckZ + (float)rLegPivot.z);
         ModelPartUtils.setPivot(leftLeg, neckX + (float)lLegPivot.x, neckY + (float)lLegPivot.y, neckZ + (float)lLegPivot.z);
 
         rightArm.yaw += body.yaw;
         rightArm.roll += body.roll;
-
         leftArm.yaw += body.yaw;
         leftArm.roll += body.roll;
     }
@@ -240,7 +239,6 @@ public abstract class PlayerModelMixin extends BipedEntityModel<PlayerEntityRend
             float currentY = ModelPartUtils.getY(part);
             float currentZ = ModelPartUtils.getZ(part);
 
-            // Invert Y for Minecraft coordinate space
             ModelPartUtils.setPivot(part,
                     currentX + (float) pos.x,
                     currentY - (float) pos.y,
@@ -253,7 +251,6 @@ public abstract class PlayerModelMixin extends BipedEntityModel<PlayerEntityRend
         long now = System.currentTimeMillis();
         AnimationState activeState = PlayerAnimationManager.getState(player);
 
-        // 1. High Priority: Action Animations (Attack, etc.)
         if (activeState != null) {
             AnimationDefinition def = AnimationLoader.ANIMATIONS.get(activeState.id);
             if (def != null) {
@@ -265,24 +262,14 @@ public abstract class PlayerModelMixin extends BipedEntityModel<PlayerEntityRend
         ItemStack stack = player.getMainHandStack();
         WeaponAnimationSet config = null;
 
-        // Detect custom items
         if (stack.getItem() instanceof WeaponItem weapon) {
             config = weapon.getAnimations();
-        } else if (stack.getItem() instanceof ParryShieldItem) {
-            // Shield detected - config stays null for now
-        } else {
-            // If holding neither, do nothing (vanilla)
-            return null;
         }
 
         float loopTime = (float) (now % 100000L) / 1000f;
         Identifier animId = null;
 
-        // FIX: If blocking, return NULL to let vanilla logic handle the shield blocking pose
-        if (player.isBlocking()) {
-            return null;
-        }
-        else if (player.isInSneakingPose()) {
+        if (player.isBlocking() || player.isInSneakingPose() || player.isUsingItem()) {
             return null;
         }
         else if (player.isSprinting()) {
