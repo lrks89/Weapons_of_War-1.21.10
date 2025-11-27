@@ -1,5 +1,6 @@
 package net.wowmod.item.custom;
 
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ShieldItem;
@@ -20,6 +21,11 @@ public class ParryShieldItem extends ShieldItem {
     @Override
     public UseAction getUseAction(ItemStack stack) {
         return UseAction.BLOCK;
+    }
+
+    @Override
+    public int getMaxUseTime(ItemStack stack, LivingEntity user) {
+        return 72000;
     }
 
     @Override
