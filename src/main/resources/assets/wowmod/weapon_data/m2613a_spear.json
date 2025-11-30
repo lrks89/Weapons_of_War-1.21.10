@@ -1,6 +1,4 @@
 {
-  "idle": "wowmod:player_animations/polearm_one_handed_idle.json",
-  "walk": "wowmod:player_animations/polearm_one_handed_walking.json",
-  "sprint": "wowmod:player_animations/polearm_one_handed_sprinting.json",
-  "attack": "wowmod:player_animations/polearm_attack_base_one_hand_thrust.json"
+  "item": "wowmod:m2613a_spear",
+  "animation": "wowmod:polearm_attack_base_one_handed_thrust"
 }

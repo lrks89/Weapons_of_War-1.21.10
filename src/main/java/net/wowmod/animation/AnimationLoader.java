@@ -1,138 +1,74 @@
 package net.wowmod.animation;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
+import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.SynchronousResourceReloader;
+import net.minecraft.resource.ResourceReloader;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.profiler.Profiler;
 import net.wowmod.WeaponsOfWar;
 
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
-public class AnimationLoader implements SynchronousResourceReloader, IdentifiableResourceReloadListener {
-    public static final Map<Identifier, AnimationDefinition> ANIMATIONS = new HashMap<>();
+/**
+ * Loads JSON animation files from assets/wowmod/player_animations
+ * during resource pack reload (client-side).
+ */
+public class AnimationLoader implements IdentifiableResourceReloadListener {
+    public static final Identifier ID = Identifier.of(WeaponsOfWar.MOD_ID, "animation_loader");
     private static final Gson GSON = new Gson();
+
+    // Global registry of loaded animations.
+    // Key: Animation name (e.g., "default_idle"), Value: Animation data
+    public static final Map<String, Animation> ANIMATIONS = new HashMap<>();
 
     @Override
     public Identifier getFabricId() {
-        return Identifier.of(WeaponsOfWar.MOD_ID, "animation_loader");
+        return ID;
     }
 
     @Override
-    public void reload(ResourceManager manager) {
-        ANIMATIONS.clear();
-        WeaponsOfWar.LOGGER.info("Loading Player Animations...");
+    public CompletableFuture<Void> reload(ResourceReloader.Store store, Executor prepareExecutor, ResourceReloader.Synchronizer synchronizer, Executor applyExecutor) {
+        return CompletableFuture.supplyAsync(() -> {
+                    // 1. Prepare: Load data on background thread
+                    Map<String, Animation> loaded = new HashMap<>();
+                    ResourceManager manager = store.getResourceManager();
 
-        manager.findResources("player_animations", id -> id.getPath().endsWith(".json")).forEach((id, resource) -> {
-            try (InputStreamReader reader = new InputStreamReader(resource.getInputStream())) {
-                JsonObject root = GSON.fromJson(reader, JsonObject.class);
+                    // Finds all .json files in assets/wowmod/player_animations
+                    Map<Identifier, Resource> resources = manager.findResources("player_animations", id -> id.getPath().endsWith(".json"));
 
-                if (root.has("animations")) {
-                    JsonObject animationsObj = root.getAsJsonObject("animations");
+                    for (Map.Entry<Identifier, Resource> entry : resources.entrySet()) {
+                        try (InputStreamReader reader = new InputStreamReader(entry.getValue().getInputStream())) {
+                            // Parse the root JSON
+                            JsonObject json = GSON.fromJson(reader, JsonObject.class);
 
-                    for (String animName : animationsObj.keySet()) {
-                        JsonObject animData = animationsObj.getAsJsonObject(animName);
-
-                        // 1. Generate Clean ID (e.g., wowmod:default_idle)
-                        String path = id.getPath();
-                        String filename = path.substring(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
-                        Identifier cleanId = Identifier.of(id.getNamespace(), filename);
-
-                        // 2. Parse Animation
-                        AnimationDefinition def = parseAnimation(animName, animData);
-
-                        if (def != null) {
-                            // 3. Register under BOTH IDs to ensure lookup works regardless of config style
-                            ANIMATIONS.put(cleanId, def);
-                            ANIMATIONS.put(id, def);
-
-                            // Also try to register without extension if it's in a subfolder (common config pattern)
-                            // e.g., wowmod:player_animations/default_idle
-                            String pathNoExt = path.substring(0, path.lastIndexOf('.'));
-                            Identifier noExtId = Identifier.of(id.getNamespace(), pathNoExt);
-                            ANIMATIONS.put(noExtId, def);
-
-                            WeaponsOfWar.LOGGER.info("Registered Animation: " + cleanId);
+                            // Bedrock files usually have a top-level "animations" object
+                            if (json.has("animations")) {
+                                JsonObject anims = json.getAsJsonObject("animations");
+                                for (String key : anims.keySet()) {
+                                    // key is likely "default_idle", "default_walking", etc.
+                                    Animation anim = GSON.fromJson(anims.get(key), Animation.class);
+                                    loaded.put(key, anim);
+                                }
+                            }
+                        } catch (Exception e) {
+                            WeaponsOfWar.LOGGER.error("Failed to load player animation: " + entry.getKey(), e);
                         }
                     }
-                }
-
-            } catch (Exception e) {
-                WeaponsOfWar.LOGGER.error("Failed to load animation: " + id, e);
-            }
-        });
-    }
-
-    private AnimationDefinition parseAnimation(String animName, JsonObject json) {
-        float length = json.has("animation_length") ? json.get("animation_length").getAsFloat() : 0.0f;
-        boolean loop = json.has("loop") && json.get("loop").getAsBoolean();
-
-        // Auto-loop detection
-        if (!loop) {
-            String lowerName = animName.toLowerCase();
-            if (lowerName.contains("idle") || lowerName.contains("walk") || lowerName.contains("sprint") || lowerName.contains("run")) {
-                loop = true;
-            }
-        }
-
-        Map<String, BoneAnimation> bones = new HashMap<>();
-
-        if (json.has("bones")) {
-            JsonObject bonesJson = json.getAsJsonObject("bones");
-            bonesJson.keySet().forEach(boneName -> {
-                JsonObject boneData = bonesJson.getAsJsonObject(boneName);
-                Map<Float, Vec3d> rotations = parseKeyframes(boneData, "rotation");
-                Map<Float, Vec3d> positions = parseKeyframes(boneData, "position");
-                bones.put(boneName, new BoneAnimation(rotations, positions));
-            });
-        }
-
-        return new AnimationDefinition(length, loop, bones);
-    }
-
-    private Map<Float, Vec3d> parseKeyframes(JsonObject json, String key) {
-        Map<Float, Vec3d> keyframes = new HashMap<>();
-        if (json.has(key)) {
-            JsonElement element = json.get(key);
-
-            // Case 1: Static Array [x, y, z]
-            if (element.isJsonArray()) {
-                var arr = element.getAsJsonArray();
-                keyframes.put(0.0f, new Vec3d(arr.get(0).getAsDouble(), arr.get(1).getAsDouble(), arr.get(2).getAsDouble()));
-            }
-            // Case 2: Object with timestamps "0.0": ...
-            else if (element.isJsonObject()) {
-                JsonObject keyframeData = element.getAsJsonObject();
-                keyframeData.keySet().forEach(timeStr -> {
-                    try {
-                        float time = Float.parseFloat(timeStr);
-                        JsonElement kfElement = keyframeData.get(timeStr);
-
-                        // Handle Bedrock "vector" object format
-                        if (kfElement.isJsonObject()) {
-                            JsonObject kfObj = kfElement.getAsJsonObject();
-                            if (kfObj.has("vector")) {
-                                var arr = kfObj.getAsJsonArray("vector");
-                                keyframes.put(time, new Vec3d(arr.get(0).getAsDouble(), arr.get(1).getAsDouble(), arr.get(2).getAsDouble()));
-                            } else if (kfObj.has("post")) { // Handle curves
-                                var arr = kfObj.getAsJsonArray("post");
-                                keyframes.put(time, new Vec3d(arr.get(0).getAsDouble(), arr.get(1).getAsDouble(), arr.get(2).getAsDouble()));
-                            }
-                        }
-                        // Handle simple array format inside timestamp
-                        else if (kfElement.isJsonArray()) {
-                            var arr = kfElement.getAsJsonArray();
-                            keyframes.put(time, new Vec3d(arr.get(0).getAsDouble(), arr.get(1).getAsDouble(), arr.get(2).getAsDouble()));
-                        }
-                    } catch (NumberFormatException ignored) {}
-                });
-            }
-        }
-        return keyframes;
+                    return loaded;
+                }, prepareExecutor)
+                .thenCompose(loaded -> synchronizer.whenPrepared(null).thenApply(v -> loaded)) // Fixed synchronization logic
+                .thenAcceptAsync(loaded -> {
+                    // 3. Apply: Update game state on main thread
+                    ANIMATIONS.clear();
+                    ANIMATIONS.putAll(loaded);
+                    WeaponsOfWar.LOGGER.info("WeaponsOfWar: Loaded " + loaded.size() + " custom player animations.");
+                }, applyExecutor);
     }
 }

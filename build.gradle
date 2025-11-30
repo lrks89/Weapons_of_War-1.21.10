@@ -26,23 +26,6 @@ repositories {
 
     //TerraformersMC - ModMenu
     maven { url = "https://maven.terraformersmc.com/"}
-
-    //GeckoLib
-    exclusiveContent {
-        forRepository {
-            maven {
-                name = 'GeckoLib'
-                url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'}
-        }
-        filter {
-            includeGroup('software.bernie.geckolib')}
-    }
-
-    //Player Animation Library
-    mavenCentral()
-    maven {
-        name = "RedlanceMinecraft"
-        url = "https://repo.redlance.org/public"}
 }
 
 fabricApi {
@@ -67,12 +50,6 @@ dependencies {
     //Mod Menu & Mod Menu Badges
     modImplementation("com.terraformersmc:modmenu:${project.mod_menu_version}")
     include(modImplementation("maven.modrinth:modmenu-badges-lib:${project.mod_menu_badges_version}"))
-
-    //GeckoLib
-    modImplementation "software.bernie.geckolib:geckolib-fabric-${project.geckolib_version}"
-
-    //Player Animation Library
-    modImplementation "com.zigythebird.playeranim:PlayerAnimationLibFabric:${project.pal_version}"
 }
 
 processResources {
