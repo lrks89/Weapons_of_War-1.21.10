@@ -7,7 +7,6 @@ import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceReloader;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.profiler.Profiler;
 import net.wowmod.WeaponsOfWar;
 
 import java.io.InputStreamReader;
@@ -16,10 +15,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-/**
- * Loads JSON animation files from assets/wowmod/player_animations
- * during resource pack reload (client-side).
- */
 public class AnimationLoader implements IdentifiableResourceReloadListener {
     public static final Identifier ID = Identifier.of(WeaponsOfWar.MOD_ID, "animation_loader");
     private static final Gson GSON = new Gson();

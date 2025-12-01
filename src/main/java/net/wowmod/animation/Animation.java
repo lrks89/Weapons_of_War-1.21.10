@@ -3,6 +3,7 @@ package net.wowmod.animation;
 import java.util.Map;
 
 public class Animation {
+
     public boolean loop;
     public float animation_length;
     public Map<String, Bone> bones;

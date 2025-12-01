@@ -7,6 +7,7 @@ import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import net.wowmod.animation.Animation;
 import net.wowmod.animation.AnimationLoader;
 import net.wowmod.util.RenderStateExtension;
+import net.wowmod.util.IAnimatedPlayer; // Added dependency for time access
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -14,11 +15,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Map;
 
-/**
- * Injects into the Player Model to override rotations with custom animation data.
- */
 @Mixin(PlayerEntityModel.class)
 public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEntityRenderState> {
+
+    // Store state of the custom jump in the Model instance itself (client-side only)
+    private static boolean wowmod$isCustomJumpActive = false;
 
     public PlayerEntityModelMixin(ModelPart root) {
         super(root);
@@ -26,59 +27,193 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
 
     @Inject(method = "setAngles(Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;)V", at = @At("TAIL"))
     public void replaceAnimations(PlayerEntityRenderState state, CallbackInfo ci) {
-        // 1. Determine which animation to play
-        String animName;
+        String animName = "default_idle";
 
         float limbDistance = state.limbSwingAmplitude;
         float animationProgress = state.age;
 
-        boolean isMoving = limbDistance > 0.1f;
-
-        // Retrieve our custom sprinting flag safely
+        // Defaults
         boolean isSprinting = false;
+        double vy = 0;
+        boolean onGround = true;
+        long timeSinceLand = 100;
+        boolean isFlying = false;
+        boolean isSwimming = false;
+        boolean isRiding = false;
+        boolean isGliding = false;
+        boolean isClimbing = false;
+        boolean isInWater = false;
+        boolean wasFluidBelow = false;
+        long lastFluidContactTime = 0; // NEW: Initialize fluid cooldown time
+
+        try {
+            isGliding = state.isGliding;
+        } catch (NoSuchFieldError e) {
+            // Field missing in specific version
+        }
+
         if (state instanceof RenderStateExtension ext) {
             isSprinting = ext.wowmod$isSprinting();
+            vy = ext.wowmod$getVerticalVelocity();
+            onGround = ext.wowmod$isOnGround();
+            timeSinceLand = ext.wowmod$getTimeSinceLanding();
+            isFlying = ext.wowmod$isFlying();
+            isSwimming = ext.wowmod$isSwimming();
+            isRiding = ext.wowmod$isRiding();
+            isClimbing = ext.wowmod$isClimbing();
+            isInWater = ext.wowmod$isInWater();
+            wasFluidBelow = ext.wowmod$wasFluidBelow();
         }
 
-        if (isMoving) {
-            animName = isSprinting ? "default_sprinting" : "default_walking";
-        } else {
-            animName = "default_idle";
+        long currentTime = (long)animationProgress; // Approximation of world time / client age
+        final long FLUID_COOLDOWN_TICKS = 20; // 1 second
+
+        // --- EXCLUSION CHECK ---
+        // 1. Permanent Vanilla Exclusions (e.g., flight, riding, active swim)
+        if (isFlying || isGliding || isSwimming || isRiding || isClimbing) {
+            return; // Use vanilla animations
         }
 
-        // 2. Fetch Animation Data
-        Animation anim = AnimationLoader.ANIMATIONS.get(animName);
+        // 2. Fluid Cooldown Exclusion: If player is in contact OR recently contacted fluid
+        boolean isFluidJumpOnCooldown = (currentTime - lastFluidContactTime) < FLUID_COOLDOWN_TICKS;
 
-        // If animation not found, let vanilla logic persist (do nothing)
-        if (anim == null) return;
+        // If currently submerged (must skip custom pose) OR recently touched fluid,
+        // we revert to vanilla logic until cooldown expires.
+        if (isInWater || isFluidJumpOnCooldown) {
+            wowmod$isCustomJumpActive = false; // Disable custom jumps during cooldown
+            return; // Use vanilla bobbing/floating/jump logic
+        }
 
-        // 3. Calculate time
-        float timeSeconds = (animationProgress * 0.05f) % anim.animation_length;
+        // --- SNEAKING CHECK ---
+        if (state.sneaking) {
+            animName = "default_idle"; // Will default to vanilla sneak pose
+        }
 
-        // 4. Apply transformations to specific bones
-        if (anim.bones != null) {
-            // FIX: Don't override body/legs if sneaking, to preserve the vanilla crouch pose
-            // In 1.21+, 'isSneaking' is typically a field in BipedEntityRenderState (which PlayerEntityRenderState extends)
-            if (!state.sneaking) {
-                applyBone(this.head, anim.bones.get("head"), timeSeconds);
-                applyBone(this.body, anim.bones.get("body"), timeSeconds);
-                applyBone(this.rightLeg, anim.bones.get("rightLeg"), timeSeconds);
-                applyBone(this.leftLeg, anim.bones.get("leftLeg"), timeSeconds);
+        boolean isMoving = limbDistance > 0.1f;
+        boolean isJumping = false;
+
+        // --- JUMP STATE MACHINE ---
+
+        // Check 1: Initiation (Only runs when touching ground and jumping up, AND NOT SNEAKING)
+        if (onGround && vy > 0.05 && !state.sneaking) {
+            // Jump is initiated if on solid ground
+            // We no longer rely on wasFluidBelow here, as the cooldown check handles that timing.
+            wowmod$isCustomJumpActive = true;
+        }
+
+        // Check 2: Landing sequence (Priority 1: Highest priority when touching ground)
+        if (onGround && (wowmod$isCustomJumpActive || timeSinceLand < 10) && !state.sneaking) {
+
+            // Stop the custom jump flag only when landing animation is complete
+            if (timeSinceLand >= 10) {
+                wowmod$isCustomJumpActive = false;
             }
 
-            // FIX: Only override arms if the player is NOT performing a vanilla action
-            // Vanilla actions we want to preserve:
-            // - Attacking (handSwingProgress > 0)
-            // - Using an item/Blocking (isUsingItem is true)
-            // - Sneaking (often changes arm position too)
-            if (state.handSwingProgress == 0.0f && !state.isUsingItem && !state.sneaking) {
-                applyBone(this.rightArm, anim.bones.get("rightArm"), timeSeconds);
-                applyBone(this.leftArm, anim.bones.get("leftArm"), timeSeconds);
+            // Sustain landing animation for a short duration
+            animName = "default_jumping_down";
+            animationProgress = (float) timeSinceLand;
+            isJumping = true;
+        }
+
+        // Check 3: Airborne Sustain (Priority 2: If airborne and jump was initiated, sustain animation)
+        else if (!onGround && !state.sneaking) {
+
+            // Sustain custom jump logic for the entire airborne phase
+            if (wowmod$isCustomJumpActive) {
+                isJumping = true;
+                if (vy > 0.05) {
+                    animName = "default_jumping_up"; // Ascent
+                } else {
+                    animName = "default_jumping_pose"; // Apex / Descent
+                }
+            }
+            // Else: If vy != 0 but custom jump wasn't initiated (e.g., walking off a cliff),
+            // fallback to sustained pose for general fall look.
+            else if (vy != 0) {
+                animName = "default_jumping_pose";
+            }
+        }
+
+        // Check 4: Movement/Idle (Fallback) - Only runs if not actively jumping or sneaking
+        else if (isMoving && !state.sneaking) {
+            animName = isSprinting ? "default_sprinting" : "default_walking";
+        }
+        // else animName remains "default_idle" (set at the top) or uses vanilla sneaking/idle pose.
+
+        // --- Apply Poses ---
+
+        Animation anim = AnimationLoader.ANIMATIONS.get(animName);
+        if (anim == null) return;
+
+        float timeSeconds;
+        if (animName.equals("default_jumping_down")) {
+            timeSeconds = animationProgress * 0.05f;
+            if (timeSeconds > anim.animation_length) timeSeconds = anim.animation_length;
+        } else {
+            timeSeconds = (animationProgress * 0.05f) % anim.animation_length;
+        }
+
+        if (anim.bones != null) {
+            float headY = 0.0f;
+            float bodyY = 0.0f;
+            float rightArmX = -5.0f; float rightArmY = 2.0f;
+            float leftArmX = 5.0f; float leftArmY = 2.0f;
+            float legX = 1.9f; float legY = 12.0f;
+
+            if (isJumping || !state.sneaking) { // Only apply custom transforms if actively jumping OR if we are using the custom idle/walk/sprint (not sneaking)
+                applyBone(this.head, anim.bones.get("head"), timeSeconds, 0, headY, 0);
+
+                applyBone(this.body, anim.bones.get("body"), timeSeconds, 0, bodyY, 0);
+
+                float bodyAnimX = 0, bodyAnimY = 0, bodyAnimZ = 0;
+                Animation.Bone bodyBone = anim.bones.get("body");
+                if (bodyBone != null && bodyBone.position != null) {
+                    float[] pos = getInterpolatedValue(bodyBone.position, timeSeconds);
+                    bodyAnimX = pos[0];
+                    bodyAnimY = -pos[1];
+                    bodyAnimZ = pos[2];
+                }
+
+                float bodyPitch = this.body.pitch;
+                float pivotY = 13.0f;
+                float dY = (float) (pivotY - pivotY * Math.cos(bodyPitch));
+                float dZ = (float) -(pivotY * Math.sin(bodyPitch));
+
+                this.body.originY += dY;
+                this.body.originZ += dZ;
+
+                float shoulderY = 2.0f;
+                float sDY = (float) (shoulderY * Math.cos(bodyPitch) - shoulderY);
+                float sDZ = (float) (shoulderY * Math.sin(bodyPitch));
+
+                this.head.originX += bodyAnimX;
+                this.head.originY += dY + bodyAnimY;
+                this.head.originZ += dZ + bodyAnimZ;
+
+                applyBone(this.rightLeg, anim.bones.get("rightLeg"), timeSeconds, -legX, legY, 0);
+                applyBone(this.leftLeg, anim.bones.get("leftLeg"), timeSeconds, legX, legY, 0);
+
+                float armBaseX_R = rightArmX + bodyAnimX;
+                float armBaseX_L = leftArmX + bodyAnimX;
+                float armBaseY = rightArmY + dY + sDY + bodyAnimY;
+                float armBaseZ = 0 + dZ + sDZ + bodyAnimZ;
+
+                if (state.handSwingProgress == 0.0f && !state.isUsingItem && !state.sneaking) {
+                    applyBone(this.rightArm, anim.bones.get("rightArm"), timeSeconds, armBaseX_R, armBaseY, armBaseZ);
+                    applyBone(this.leftArm, anim.bones.get("leftArm"), timeSeconds, armBaseX_L, armBaseY, armBaseZ);
+                }
+            } else {
+                // When sneaking (state.sneaking == true), we rely on vanilla's setting of body/head/limb positions/rotations
+                // We only apply arm/item poses if needed (swinging, item use, etc.)
+                if (state.handSwingProgress == 0.0f && !state.isUsingItem && !state.sneaking) {
+                    applyBone(this.rightArm, anim.bones.get("rightArm"), timeSeconds, rightArmX, rightArmY, 0);
+                    applyBone(this.leftArm, anim.bones.get("leftArm"), timeSeconds, leftArmX, leftArmY, 0);
+                }
             }
         }
     }
 
-    private void applyBone(ModelPart part, Animation.Bone boneData, float time) {
+    private void applyBone(ModelPart part, Animation.Bone boneData, float time, float defaultX, float defaultY, float defaultZ) {
         if (part == null || boneData == null) return;
 
         if (boneData.rotation != null) {
@@ -86,6 +221,17 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             part.pitch = (float) Math.toRadians(rot[0]);
             part.yaw = (float) Math.toRadians(rot[1]);
             part.roll = (float) Math.toRadians(rot[2]);
+        }
+
+        if (boneData.position != null) {
+            float[] pos = getInterpolatedValue(boneData.position, time);
+            part.originX = defaultX + pos[0];
+            part.originY = defaultY - pos[1];
+            part.originZ = defaultZ + pos[2];
+        } else {
+            part.originX = defaultX;
+            part.originY = defaultY;
+            part.originZ = defaultZ;
         }
     }
 

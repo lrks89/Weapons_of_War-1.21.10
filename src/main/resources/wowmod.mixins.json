@@ -3,6 +3,8 @@
   "package": "net.wowmod.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ElytraFeatureRendererMixin",
+    "PlayerEntityMixin",
     "PlayerEntityModelMixin",
     "PlayerEntityRendererMixin",
     "PlayerEntityRenderStateMixin"
