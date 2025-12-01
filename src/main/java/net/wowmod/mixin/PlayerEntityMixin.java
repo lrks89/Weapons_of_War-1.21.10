@@ -20,8 +20,8 @@ public class PlayerEntityMixin implements IParryPlayer, IAnimatedPlayer {
     // --- IAnimatedPlayer Fields ---
     @Unique private long wowmod$lastLandTime;
     @Unique private boolean wowmod$wasOnGround;
-    @Unique private boolean wowmod$wasFluidBelow;
-    @Unique private long wowmod$lastFluidContactTime = -999; // NEW: Field to store last contact timestamp
+    // Removed: @Unique private boolean wowmod$wasFluidBelow;
+    @Unique private long wowmod$lastFluidContactTime = -999;
 
     // IParryPlayer Implementation
     @Override public long wowmod_getLastParryTime() { return this.wowmod$lastParryTime; }
@@ -32,10 +32,10 @@ public class PlayerEntityMixin implements IParryPlayer, IAnimatedPlayer {
     @Override public void wowmod$setLastLandTime(long time) { this.wowmod$lastLandTime = time; }
     @Override public boolean wowmod$wasOnGround() { return this.wowmod$wasOnGround; }
     @Override public void wowmod$setWasOnGround(boolean onGround) { this.wowmod$wasOnGround = onGround; }
-    @Override public boolean wowmod$wasFluidBelow() { return this.wowmod$wasFluidBelow; }
-    @Override public void wowmod$setWasFluidBelow(boolean fluidBelow) { this.wowmod$wasFluidBelow = fluidBelow; }
+    // Removed: @Override public boolean wowmod$wasFluidBelow() { return this.wowmod$wasFluidBelow; }
+    // Removed: @Override public void wowmod$setWasFluidBelow(boolean fluidBelow) { this.wowmod$wasFluidBelow = fluidBelow; }
 
-    // Fluid Contact Time Implementation (NEW)
+    // Fluid Contact Time Implementation
     @Override public long wowmod$getLastFluidContactTime() { return this.wowmod$lastFluidContactTime; }
     @Override public void wowmod$setLastFluidContactTime(long time) { this.wowmod$lastFluidContactTime = time; }
 
@@ -50,24 +50,15 @@ public class PlayerEntityMixin implements IParryPlayer, IAnimatedPlayer {
             this.wowmod$lastLandTime = self.getEntityWorld().getTime();
         }
 
-        // 2. Fluid Contact Cooldown (NEW LOGIC)
-        // Check if the player is currently touching or submerged in any fluid
-        if (self.isTouchingWater() || self.isInLava()) {
+        // 2. Fluid Contact Cooldown (Primary fluid check)
+        // Check if the player is currently touching, submerged, or splashing in any fluid
+        if (self.isTouchingWater() || self.isInLava() || self.isSubmergedInWater() || self.isSprinting()) {
             this.wowmod$lastFluidContactTime = self.getEntityWorld().getTime();
         }
+        // Note: Checking for fluid directly below (wowmod$wasFluidBelow) is no longer necessary
+        // as the cooldown based on surface contact (isTouchingWater/isInLava) handles the jump suppression.
 
-        // 3. Fluid Below Detection
-        if (onGround) {
-            // Check the block below the player's position
-            boolean fluidBelow = self.getEntityWorld().getFluidState(self.getBlockPos().down()).isIn(FluidTags.WATER)
-                    || self.getEntityWorld().getFluidState(self.getBlockPos().down()).isIn(FluidTags.LAVA);
-
-            this.wowmod$wasFluidBelow = fluidBelow;
-        } else if (!onGround && this.wowmod$wasOnGround) {
-            // Logic for when the player just lifted off (jumped/fell)
-        }
-
-        // 4. Update previous state
+        // 3. Update previous state
         this.wowmod$wasOnGround = onGround;
     }
 }

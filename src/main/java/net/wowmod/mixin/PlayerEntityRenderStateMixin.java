@@ -16,7 +16,7 @@ public class PlayerEntityRenderStateMixin implements RenderStateExtension {
     @Unique private boolean wowmod$isRiding;
     @Unique private boolean wowmod$isClimbing;
     @Unique private boolean wowmod$isInWater;
-    @Unique private boolean wowmod$wasFluidBelow; // New field for jump origin tracking
+    // Removed: @Unique private boolean wowmod$wasFluidBelow; // New field for jump origin tracking
 
     // Fields tracking complex data:
     @Unique private long wowmod$timeSinceLanding;
@@ -55,8 +55,8 @@ public class PlayerEntityRenderStateMixin implements RenderStateExtension {
     @Override public boolean wowmod$isInWater() { return this.wowmod$isInWater; }
     @Override public void wowmod$setInWater(boolean inWater) { this.wowmod$isInWater = inWater; }
 
-    @Override public boolean wowmod$wasFluidBelow() { return this.wowmod$wasFluidBelow; }
-    @Override public void wowmod$setWasFluidBelow(boolean fluidBelow) { this.wowmod$wasFluidBelow = fluidBelow; }
+    // Removed: @Override public boolean wowmod$wasFluidBelow() { return this.wowmod$wasFluidBelow; }
+    // Removed: @Override public void wowmod$setWasFluidBelow(boolean fluidBelow) { this.wowmod$wasFluidBelow = fluidBelow; }
 
     // FIX ADDED: Entity Getter and Setter Implementation
     @Override public Object wowmod$getEntity() { return this.wowmod$entity; }

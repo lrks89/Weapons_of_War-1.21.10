@@ -38,8 +38,6 @@ public class PlayerEntityRendererMixin {
                     long diff = player.getEntityWorld().getTime() - animatedPlayer.wowmod$getLastLandTime();
                     extendedState.wowmod$setTimeSinceLanding(diff);
 
-                    // New: Capture persistent fluid-below state from PlayerEntityMixin
-                    extendedState.wowmod$setWasFluidBelow(animatedPlayer.wowmod$wasFluidBelow());
                 }
             }
         }

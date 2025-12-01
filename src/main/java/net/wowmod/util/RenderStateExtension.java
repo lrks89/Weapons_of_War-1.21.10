@@ -36,9 +36,9 @@ public interface RenderStateExtension {
     boolean wowmod$isInWater();
     void wowmod$setInWater(boolean inWater);
 
-    // Jump Origin Check (was fluid below at start of jump)
-    boolean wowmod$wasFluidBelow();
-    void wowmod$setWasFluidBelow(boolean fluidBelow);
+    // Removed: Jump Origin Check (was fluid below at start of jump)
+    // boolean wowmod$wasFluidBelow();
+    // void wowmod$setWasFluidBelow(boolean fluidBelow);
 
     Object wowmod$getEntity();
     void wowmod$setEntity(Object entity);

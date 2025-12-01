@@ -7,8 +7,9 @@ import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import net.wowmod.animation.Animation;
 import net.wowmod.animation.AnimationLoader;
 import net.wowmod.util.RenderStateExtension;
-import net.wowmod.util.IAnimatedPlayer; // Added dependency for time access
+import net.wowmod.util.IAnimatedPlayer;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -19,7 +20,7 @@ import java.util.Map;
 public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEntityRenderState> {
 
     // Store state of the custom jump in the Model instance itself (client-side only)
-    private static boolean wowmod$isCustomJumpActive = false;
+    @Unique private static boolean wowmod$isCustomJumpActive = false;
 
     public PlayerEntityModelMixin(ModelPart root) {
         super(root);
@@ -43,8 +44,8 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         boolean isGliding = false;
         boolean isClimbing = false;
         boolean isInWater = false;
-        boolean wasFluidBelow = false;
-        long lastFluidContactTime = 0; // NEW: Initialize fluid cooldown time
+        // Removed: boolean wasFluidBelow = false;
+        long lastFluidContactTime = -999; // Updated initial value to better reflect 'not in contact'
 
         try {
             isGliding = state.isGliding;
@@ -62,31 +63,41 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             isRiding = ext.wowmod$isRiding();
             isClimbing = ext.wowmod$isClimbing();
             isInWater = ext.wowmod$isInWater();
-            wasFluidBelow = ext.wowmod$wasFluidBelow();
+            // wasFluidBelow = ext.wowmod$wasFluidBelow(); // No longer needed
+
+            // Fetch the fluid contact time from the entity's mixin via the render state
+            // The entity mixin (PlayerEntityMixin) is responsible for tracking this value persistently.
+            Object entity = ext.wowmod$getEntity();
+            if (entity instanceof IAnimatedPlayer animatedPlayer) {
+                lastFluidContactTime = animatedPlayer.wowmod$getLastFluidContactTime();
+            }
         }
 
         long currentTime = (long)animationProgress; // Approximation of world time / client age
         final long FLUID_COOLDOWN_TICKS = 20; // 1 second
 
-        // --- EXCLUSION CHECK ---
+        // --- EXCLUSION CHECK (A) ---
         // 1. Permanent Vanilla Exclusions (e.g., flight, riding, active swim)
-        if (isFlying || isGliding || isSwimming || isRiding || isClimbing) {
+        if (isFlying || isGliding || isRiding || isClimbing) {
+            wowmod$isCustomJumpActive = false; // Reset jump state when overriding with vanilla
             return; // Use vanilla animations
         }
 
-        // 2. Fluid Cooldown Exclusion: If player is in contact OR recently contacted fluid
+        // 2. Fluid Exclusion: If player is in contact OR recently contacted fluid
         boolean isFluidJumpOnCooldown = (currentTime - lastFluidContactTime) < FLUID_COOLDOWN_TICKS;
+        boolean skipCustomJump = isInWater || isSwimming || isFluidJumpOnCooldown;
 
-        // If currently submerged (must skip custom pose) OR recently touched fluid,
-        // we revert to vanilla logic until cooldown expires.
-        if (isInWater || isFluidJumpOnCooldown) {
+        // If currently submerged/swimming OR recently touched fluid, we revert to vanilla logic until cooldown expires.
+        if (skipCustomJump) {
             wowmod$isCustomJumpActive = false; // Disable custom jumps during cooldown
             return; // Use vanilla bobbing/floating/jump logic
         }
 
+
         // --- SNEAKING CHECK ---
         if (state.sneaking) {
             animName = "default_idle"; // Will default to vanilla sneak pose
+            wowmod$isCustomJumpActive = false; // Sneaking also disables custom jump
         }
 
         boolean isMoving = limbDistance > 0.1f;
@@ -94,15 +105,15 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
 
         // --- JUMP STATE MACHINE ---
 
-        // Check 1: Initiation (Only runs when touching ground and jumping up, AND NOT SNEAKING)
-        if (onGround && vy > 0.05 && !state.sneaking) {
-            // Jump is initiated if on solid ground
-            // We no longer rely on wasFluidBelow here, as the cooldown check handles that timing.
+        // Check 1: Initiation (Only runs when touching ground and jumping up, AND NOT SNEAKING/FLUID)
+        if (onGround && vy > 0.05 && !state.sneaking && !skipCustomJump) {
+            // Jump is initiated if on solid ground and moving upwards
             wowmod$isCustomJumpActive = true;
         }
 
         // Check 2: Landing sequence (Priority 1: Highest priority when touching ground)
-        if (onGround && (wowmod$isCustomJumpActive || timeSinceLand < 10) && !state.sneaking) {
+        // Note: The `!skipCustomJump` here is technically redundant if we `return` above, but keeps logic clean.
+        if (onGround && (wowmod$isCustomJumpActive || timeSinceLand < 10) && !state.sneaking && !skipCustomJump) {
 
             // Stop the custom jump flag only when landing animation is complete
             if (timeSinceLand >= 10) {
@@ -116,7 +127,7 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         }
 
         // Check 3: Airborne Sustain (Priority 2: If airborne and jump was initiated, sustain animation)
-        else if (!onGround && !state.sneaking) {
+        else if (!onGround && !state.sneaking && !skipCustomJump) {
 
             // Sustain custom jump logic for the entire airborne phase
             if (wowmod$isCustomJumpActive) {
@@ -134,7 +145,7 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             }
         }
 
-        // Check 4: Movement/Idle (Fallback) - Only runs if not actively jumping or sneaking
+        // Check 4: Movement/Idle (Fallback) - Only runs if not actively jumping or sneaking/fluid
         else if (isMoving && !state.sneaking) {
             animName = isSprinting ? "default_sprinting" : "default_walking";
         }
@@ -160,7 +171,8 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             float leftArmX = 5.0f; float leftArmY = 2.0f;
             float legX = 1.9f; float legY = 12.0f;
 
-            if (isJumping || !state.sneaking) { // Only apply custom transforms if actively jumping OR if we are using the custom idle/walk/sprint (not sneaking)
+            // Only apply custom offsets if we are using custom animations for jump/idle/walk/sprint
+            if (isJumping || !state.sneaking) {
                 applyBone(this.head, anim.bones.get("head"), timeSeconds, 0, headY, 0);
 
                 applyBone(this.body, anim.bones.get("body"), timeSeconds, 0, bodyY, 0);
@@ -203,7 +215,7 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
                     applyBone(this.leftArm, anim.bones.get("leftArm"), timeSeconds, armBaseX_L, armBaseY, armBaseZ);
                 }
             } else {
-                // When sneaking (state.sneaking == true), we rely on vanilla's setting of body/head/limb positions/rotations
+                // When falling back to vanilla pose (e.g., vanilla idle/walk/sprint or vanilla sneaking)
                 // We only apply arm/item poses if needed (swinging, item use, etc.)
                 if (state.handSwingProgress == 0.0f && !state.isUsingItem && !state.sneaking) {
                     applyBone(this.rightArm, anim.bones.get("rightArm"), timeSeconds, rightArmX, rightArmY, 0);
