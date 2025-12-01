@@ -32,11 +32,6 @@ public class PlayerEntityMixin implements IParryPlayer, IAnimatedPlayer {
     @Override public boolean wowmod$wasOnGround() { return this.wowmod$wasOnGround; }
     @Override public void wowmod$setWasOnGround(boolean onGround) { this.wowmod$wasOnGround = onGround; }
 
-    // Fluid Contact Time Implementation
-    @Override public long wowmod$getLastFluidContactTime() { return this.wowmod$lastFluidContactTime; }
-    @Override public void wowmod$setLastFluidContactTime(long time) { this.wowmod$lastFluidContactTime = time; }
-
-
     @Inject(method = "tick", at = @At("HEAD"))
     private void trackLandingAndGroundState(CallbackInfo ci) {
         PlayerEntity self = (PlayerEntity) (Object) this;

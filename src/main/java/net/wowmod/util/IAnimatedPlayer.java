@@ -5,11 +5,4 @@ public interface IAnimatedPlayer {
     void wowmod$setLastLandTime(long time);
     boolean wowmod$wasOnGround();
     void wowmod$setWasOnGround(boolean onGround);
-
-    // Removed: Track if the block immediately below the player was a fluid (used for jump suppression)
-    // boolean wowmod$wasFluidBelow();
-    // void wowmod$setWasFluidBelow(boolean fluidBelow);
-
-    long wowmod$getLastFluidContactTime();
-    void wowmod$setLastFluidContactTime(long time);
 }

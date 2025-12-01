@@ -44,8 +44,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         boolean isGliding = false;
         boolean isClimbing = false;
         boolean isInWater = false;
-        // Removed: boolean wasFluidBelow = false;
-        long lastFluidContactTime = -999; // Updated initial value to better reflect 'not in contact'
 
         try {
             isGliding = state.isGliding;
@@ -63,18 +61,7 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             isRiding = ext.wowmod$isRiding();
             isClimbing = ext.wowmod$isClimbing();
             isInWater = ext.wowmod$isInWater();
-            // wasFluidBelow = ext.wowmod$wasFluidBelow(); // No longer needed
-
-            // Fetch the fluid contact time from the entity's mixin via the render state
-            // The entity mixin (PlayerEntityMixin) is responsible for tracking this value persistently.
-            Object entity = ext.wowmod$getEntity();
-            if (entity instanceof IAnimatedPlayer animatedPlayer) {
-                lastFluidContactTime = animatedPlayer.wowmod$getLastFluidContactTime();
-            }
         }
-
-        long currentTime = (long)animationProgress; // Approximation of world time / client age
-        final long FLUID_COOLDOWN_TICKS = 20; // 1 second
 
         // --- EXCLUSION CHECK (A) ---
         // 1. Permanent Vanilla Exclusions (e.g., flight, riding, active swim)
@@ -83,16 +70,13 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             return; // Use vanilla animations
         }
 
-        // 2. Fluid Exclusion: If player is in contact OR recently contacted fluid
-        boolean isFluidJumpOnCooldown = (currentTime - lastFluidContactTime) < FLUID_COOLDOWN_TICKS;
-        boolean skipCustomJump = isInWater || isSwimming || isFluidJumpOnCooldown;
+        boolean skipCustomJump = isInWater || isSwimming;
 
         // If currently submerged/swimming OR recently touched fluid, we revert to vanilla logic until cooldown expires.
         if (skipCustomJump) {
             wowmod$isCustomJumpActive = false; // Disable custom jumps during cooldown
             return; // Use vanilla bobbing/floating/jump logic
         }
-
 
         // --- SNEAKING CHECK ---
         if (state.sneaking) {
@@ -121,7 +105,7 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             }
 
             // Sustain landing animation for a short duration
-            animName = "default_jumping_down";
+            animName = "default_landing"; // Renamed from default_jumping_down to match new JSON name
             animationProgress = (float) timeSinceLand;
             isJumping = true;
         }
@@ -135,13 +119,13 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
                 if (vy > 0.05) {
                     animName = "default_jumping_up"; // Ascent
                 } else {
-                    animName = "default_jumping_pose"; // Apex / Descent
+                    animName = "default_falling"; // Apex / Descent (Renamed from default_jumping_pose)
                 }
             }
             // Else: If vy != 0 but custom jump wasn't initiated (e.g., walking off a cliff),
             // fallback to sustained pose for general fall look.
             else if (vy != 0) {
-                animName = "default_jumping_pose";
+                animName = "default_falling"; // Use falling animation for generic fall
             }
         }
 
@@ -157,7 +141,8 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         if (anim == null) return;
 
         float timeSeconds;
-        if (animName.equals("default_jumping_down")) {
+        if (animName.equals("default_landing")) {
+            // Landing animation length is 0.5 seconds
             timeSeconds = animationProgress * 0.05f;
             if (timeSeconds > anim.animation_length) timeSeconds = anim.animation_length;
         } else {

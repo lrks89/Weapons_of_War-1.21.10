@@ -35,11 +35,4 @@ public interface RenderStateExtension {
     // Water detection
     boolean wowmod$isInWater();
     void wowmod$setInWater(boolean inWater);
-
-    // Fluid Contact Cooldown (NEW)
-    long wowmod$getLastFluidContactTime();
-    void wowmod$setLastFluidContactTime(long time);
-
-    Object wowmod$getEntity();
-    void wowmod$setEntity(Object entity);
 }

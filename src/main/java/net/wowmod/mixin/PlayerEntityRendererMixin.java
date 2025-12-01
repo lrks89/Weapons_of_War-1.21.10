@@ -37,9 +37,6 @@ public class PlayerEntityRendererMixin {
                 if (player instanceof IAnimatedPlayer animatedPlayer) {
                     long diff = player.getEntityWorld().getTime() - animatedPlayer.wowmod$getLastLandTime();
                     extendedState.wowmod$setTimeSinceLanding(diff);
-
-                    // NEW: Capture persistent fluid contact time from PlayerEntityMixin
-                    extendedState.wowmod$setLastFluidContactTime(animatedPlayer.wowmod$getLastFluidContactTime());
                 }
             }
         }

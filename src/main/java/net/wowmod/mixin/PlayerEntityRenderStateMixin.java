@@ -56,12 +56,4 @@ public class PlayerEntityRenderStateMixin implements RenderStateExtension {
 
     @Override public boolean wowmod$isInWater() { return this.wowmod$isInWater; }
     @Override public void wowmod$setInWater(boolean inWater) { this.wowmod$isInWater = inWater; }
-
-    // NEW: Fluid Contact Cooldown
-    @Override public long wowmod$getLastFluidContactTime() { return this.wowmod$lastFluidContactTime; }
-    @Override public void wowmod$setLastFluidContactTime(long time) { this.wowmod$lastFluidContactTime = time; }
-
-    // Entity Getter and Setter Implementation
-    @Override public Object wowmod$getEntity() { return this.wowmod$entity; }
-    @Override public void wowmod$setEntity(Object entity) { this.wowmod$entity = entity; }
 }
