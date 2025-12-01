@@ -20,7 +20,6 @@ public class PlayerEntityMixin implements IParryPlayer, IAnimatedPlayer {
     // --- IAnimatedPlayer Fields ---
     @Unique private long wowmod$lastLandTime;
     @Unique private boolean wowmod$wasOnGround;
-    // Removed: @Unique private boolean wowmod$wasFluidBelow;
     @Unique private long wowmod$lastFluidContactTime = -999;
 
     // IParryPlayer Implementation
@@ -32,8 +31,6 @@ public class PlayerEntityMixin implements IParryPlayer, IAnimatedPlayer {
     @Override public void wowmod$setLastLandTime(long time) { this.wowmod$lastLandTime = time; }
     @Override public boolean wowmod$wasOnGround() { return this.wowmod$wasOnGround; }
     @Override public void wowmod$setWasOnGround(boolean onGround) { this.wowmod$wasOnGround = onGround; }
-    // Removed: @Override public boolean wowmod$wasFluidBelow() { return this.wowmod$wasFluidBelow; }
-    // Removed: @Override public void wowmod$setWasFluidBelow(boolean fluidBelow) { this.wowmod$wasFluidBelow = fluidBelow; }
 
     // Fluid Contact Time Implementation
     @Override public long wowmod$getLastFluidContactTime() { return this.wowmod$lastFluidContactTime; }
@@ -50,13 +47,11 @@ public class PlayerEntityMixin implements IParryPlayer, IAnimatedPlayer {
             this.wowmod$lastLandTime = self.getEntityWorld().getTime();
         }
 
-        // 2. Fluid Contact Cooldown (Primary fluid check)
-        // Check if the player is currently touching, submerged, or splashing in any fluid
-        if (self.isTouchingWater() || self.isInLava() || self.isSubmergedInWater() || self.isSprinting()) {
+        // 2. Fluid Contact Cooldown
+        // Update timestamp if the player is currently touching or submerged in any fluid
+        if (self.isTouchingWater() || self.isInLava()) {
             this.wowmod$lastFluidContactTime = self.getEntityWorld().getTime();
         }
-        // Note: Checking for fluid directly below (wowmod$wasFluidBelow) is no longer necessary
-        // as the cooldown based on surface contact (isTouchingWater/isInLava) handles the jump suppression.
 
         // 3. Update previous state
         this.wowmod$wasOnGround = onGround;

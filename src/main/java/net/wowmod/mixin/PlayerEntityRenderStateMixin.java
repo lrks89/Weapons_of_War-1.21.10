@@ -16,13 +16,15 @@ public class PlayerEntityRenderStateMixin implements RenderStateExtension {
     @Unique private boolean wowmod$isRiding;
     @Unique private boolean wowmod$isClimbing;
     @Unique private boolean wowmod$isInWater;
-    // Removed: @Unique private boolean wowmod$wasFluidBelow; // New field for jump origin tracking
+
+    // NEW: Fluid Contact Time
+    @Unique private long wowmod$lastFluidContactTime;
 
     // Fields tracking complex data:
     @Unique private long wowmod$timeSinceLanding;
     @Unique private boolean wowmod$onGround;
 
-    // FIX ADDED: Field for storing the associated entity
+    // Field for storing the associated entity
     @Unique private Object wowmod$entity;
 
 
@@ -55,10 +57,11 @@ public class PlayerEntityRenderStateMixin implements RenderStateExtension {
     @Override public boolean wowmod$isInWater() { return this.wowmod$isInWater; }
     @Override public void wowmod$setInWater(boolean inWater) { this.wowmod$isInWater = inWater; }
 
-    // Removed: @Override public boolean wowmod$wasFluidBelow() { return this.wowmod$wasFluidBelow; }
-    // Removed: @Override public void wowmod$setWasFluidBelow(boolean fluidBelow) { this.wowmod$wasFluidBelow = fluidBelow; }
+    // NEW: Fluid Contact Cooldown
+    @Override public long wowmod$getLastFluidContactTime() { return this.wowmod$lastFluidContactTime; }
+    @Override public void wowmod$setLastFluidContactTime(long time) { this.wowmod$lastFluidContactTime = time; }
 
-    // FIX ADDED: Entity Getter and Setter Implementation
+    // Entity Getter and Setter Implementation
     @Override public Object wowmod$getEntity() { return this.wowmod$entity; }
     @Override public void wowmod$setEntity(Object entity) { this.wowmod$entity = entity; }
 }

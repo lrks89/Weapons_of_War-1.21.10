@@ -32,13 +32,13 @@ public interface RenderStateExtension {
     boolean wowmod$isClimbing();
     void wowmod$setClimbing(boolean climbing);
 
-    // Water detection (New)
+    // Water detection
     boolean wowmod$isInWater();
     void wowmod$setInWater(boolean inWater);
 
-    // Removed: Jump Origin Check (was fluid below at start of jump)
-    // boolean wowmod$wasFluidBelow();
-    // void wowmod$setWasFluidBelow(boolean fluidBelow);
+    // Fluid Contact Cooldown (NEW)
+    long wowmod$getLastFluidContactTime();
+    void wowmod$setLastFluidContactTime(long time);
 
     Object wowmod$getEntity();
     void wowmod$setEntity(Object entity);
