@@ -1,19 +1,11 @@
 package net.wowmod;
 
 import net.fabricmc.api.ClientModInitializer;
-// Added
-import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.AttributeModifiersComponent;
 import net.minecraft.resource.ResourceType;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
-import net.wowmod.animation.AnimationLoader;
-
-import java.util.ArrayList;
-import java.util.List;
+import net.wowmod.animation.player_animations.AnimationLoader;
+import net.wowmod.animation.player_animations.player_weapons.WeaponAnimationLoader;
 
 public class WeaponsOfWarClient implements ClientModInitializer {
 
@@ -21,7 +13,10 @@ public class WeaponsOfWarClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-
+        // Register the generic animation loader
         ResourceManagerHelper.get(ResourceType.CLIENT_RESOURCES).registerReloadListener(new AnimationLoader());
+
+        // Register the weapon-specific configuration loader
+        ResourceManagerHelper.get(ResourceType.CLIENT_RESOURCES).registerReloadListener(new WeaponAnimationLoader());
     }
 }

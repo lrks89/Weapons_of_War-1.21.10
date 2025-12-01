@@ -1,4 +1,4 @@
-package net.wowmod.animation;
+package net.wowmod.animation.player_animations;
 
 import java.util.Map;
 

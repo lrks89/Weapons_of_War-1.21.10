@@ -1,7 +1,7 @@
 {
 	"format_version": "1.8.0",
 	"animations": {
-		"default_jumping_1": {
+		"jumping_default_1": {
 			"animation_length": 1,
 			"bones": {
 				"body": {
@@ -101,7 +101,7 @@
 				}
 			}
 		},
-		"default_jumping_2": {
+		"jumping_default_2": {
 			"loop": true,
 			"animation_length": 4,
 			"bones": {
@@ -219,7 +219,7 @@
 				}
 			}
 		},
-		"default_jumping_3": {
+		"jumping_default_3": {
 			"animation_length": 0.5,
 			"bones": {
 				"body": {

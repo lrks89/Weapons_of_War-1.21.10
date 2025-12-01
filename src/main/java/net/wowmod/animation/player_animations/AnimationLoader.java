@@ -1,4 +1,4 @@
-package net.wowmod.animation;
+package net.wowmod.animation.player_animations;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;

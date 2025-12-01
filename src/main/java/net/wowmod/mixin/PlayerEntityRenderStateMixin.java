@@ -1,6 +1,7 @@
 package net.wowmod.mixin;
 
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
+import net.minecraft.item.ItemStack;
 import net.wowmod.util.RenderStateExtension;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -24,9 +25,8 @@ public class PlayerEntityRenderStateMixin implements RenderStateExtension {
     @Unique private long wowmod$timeSinceLanding;
     @Unique private boolean wowmod$onGround;
 
-    // Field for storing the associated entity
-    @Unique private Object wowmod$entity;
-
+    // --- FIX: Item Stack Storage ---
+    @Unique private ItemStack wowmod$mainHandStack = ItemStack.EMPTY;
 
     // Implementation of RenderStateExtension interface
 
@@ -56,4 +56,8 @@ public class PlayerEntityRenderStateMixin implements RenderStateExtension {
 
     @Override public boolean wowmod$isInWater() { return this.wowmod$isInWater; }
     @Override public void wowmod$setInWater(boolean inWater) { this.wowmod$isInWater = inWater; }
+
+    // --- FIX: Item Stack Accessors ---
+    @Override public ItemStack wowmod$getMainHandStack() { return this.wowmod$mainHandStack; }
+    @Override public void wowmod$setMainHandStack(ItemStack stack) { this.wowmod$mainHandStack = stack; }
 }

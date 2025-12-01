@@ -1,4 +1,8 @@
 {
-  "item": "wowmod:m2613a_spear",
-  "animation": "wowmod:polearm_attack_base_one_handed_thrust"
+  "animations": {
+    "idle": "wowmod:idle_polearm_one_handed",
+    "walking": "wowmod:walking_polearm_one_handed",
+    "sprinting": "wowmod:sprinting_polearm_one_handed",
+    "jumping": "wowmod:jumping_polearm"
+  }
 }

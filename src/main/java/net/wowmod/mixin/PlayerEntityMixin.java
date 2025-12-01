@@ -1,7 +1,6 @@
 package net.wowmod.mixin;
 
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.registry.tag.FluidTags;
 import net.wowmod.util.IParryPlayer;
 import net.wowmod.util.IAnimatedPlayer;
 import org.spongepowered.asm.mixin.Mixin;

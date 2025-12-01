@@ -1,7 +1,6 @@
 package net.wowmod.util;
 
-// NOTE: In a real Minecraft mod, 'Object' should be the common base entity class,
-// e.g., 'net.minecraft.entity.Entity' or 'net.minecraft.entity.LivingEntity'.
+import net.minecraft.item.ItemStack;
 
 public interface RenderStateExtension {
     boolean wowmod$isSprinting();
@@ -35,4 +34,8 @@ public interface RenderStateExtension {
     // Water detection
     boolean wowmod$isInWater();
     void wowmod$setInWater(boolean inWater);
+
+    // --- FIX: Add Main Hand Item Stack Storage ---
+    ItemStack wowmod$getMainHandStack();
+    void wowmod$setMainHandStack(ItemStack stack);
 }

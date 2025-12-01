@@ -1,15 +1,11 @@
 {
 	"format_version": "1.8.0",
 	"animations": {
-		"polearm_one_handed_idle": {
+		"idle_default": {
+			"loop": true,
 			"animation_length": 4,
 			"bones": {
-				"body": {
-					"rotation": {
-						"0.0": [0, 0, 0],
-						"2.0": [0, 0, 0],
-						"4.0": [0, 0, 0]
-					},
+				"head": {
 					"position": {
 						"0.0": [0, 0, 0],
 						"2.0": [0, 0, 0],
@@ -21,10 +17,10 @@
 						"4.0": [1, 1, 1]
 					}
 				},
-				"head": {
+				"body": {
 					"rotation": {
 						"0.0": [0, 0, 0],
-						"2.0": [-5, 0, 0],
+						"2.0": [0, 0, 0],
 						"4.0": [0, 0, 0]
 					},
 					"position": {

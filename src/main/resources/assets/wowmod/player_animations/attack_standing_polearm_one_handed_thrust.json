@@ -1,7 +1,7 @@
 {
 	"format_version": "1.8.0",
 	"animations": {
-		"polearm_attack_base_one_handed_thrust": {
+		"attack_standing_polearm_one_handed_thrust": {
 			"animation_length": 0.625,
 			"bones": {
 				"body": {

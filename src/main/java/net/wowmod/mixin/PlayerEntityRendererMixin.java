@@ -34,6 +34,9 @@ public class PlayerEntityRendererMixin {
                 boolean inCollisionFluid = player.isInLava() || player.isSubmergedInWater() || player.isTouchingWater();
                 extendedState.wowmod$setInWater(inCollisionFluid);
 
+                // --- FIX: Pass Main Hand Item ---
+                extendedState.wowmod$setMainHandStack(player.getMainHandStack());
+
                 if (player instanceof IAnimatedPlayer animatedPlayer) {
                     long diff = player.getEntityWorld().getTime() - animatedPlayer.wowmod$getLastLandTime();
                     extendedState.wowmod$setTimeSinceLanding(diff);
