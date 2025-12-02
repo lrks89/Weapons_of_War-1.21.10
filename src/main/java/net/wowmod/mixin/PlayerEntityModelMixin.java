@@ -4,7 +4,9 @@ import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.Arm;
 import net.minecraft.util.Identifier;
 import net.wowmod.animation.player_animations.PlayerAnimationState;
 import net.wowmod.animation.player_animations.Animation;
@@ -18,6 +20,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.Collections;
 import java.util.Map;
 import org.joml.Quaternionf;
 
@@ -26,8 +29,20 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
 
     @Unique private static boolean wowmod$isCustomJumpActive = false;
 
+    // Virtual bones for items
+    @Unique public ModelPart wowmod$rightItem;
+    @Unique public ModelPart wowmod$leftItem;
+
     public PlayerEntityModelMixin(ModelPart root) {
         super(root);
+    }
+
+    // Initialize the virtual bones
+    @Inject(method = "<init>", at = @At("TAIL"))
+    public void initItemBones(ModelPart root, boolean thinArms, CallbackInfo ci) {
+        // Create empty parts (no cubes) solely for transformation
+        this.wowmod$rightItem = new ModelPart(Collections.emptyList(), Collections.emptyMap());
+        this.wowmod$leftItem = new ModelPart(Collections.emptyList(), Collections.emptyMap());
     }
 
     @Inject(method = "setAngles(Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;)V", at = @At("TAIL"))
@@ -47,8 +62,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
 
         // --- CUSTOM ANIMATION LOOKUP LOGIC ---
 
-        // 4. FIX: Use the extension method.
-        // If this is red, your RenderStateExtension.java interface is missing the wowmod$getMainHandStack() method.
         ItemStack mainHandStack = ext.wowmod$getMainHandStack();
 
         Identifier itemID = null;
@@ -66,7 +79,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         String finalAnimName = animState.getDefaultAnimationName();
 
         if (config != null) {
-            // FIX: Ensure 'config' is the correct type from 'net.wowmod.animation'
             Identifier customAnimID = config.getAnimation(animState);
             if (customAnimID != null) {
                 finalAnimName = customAnimID.getPath().replace("player_animations/", "");
@@ -78,6 +90,36 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         if (anim == null) return;
 
         applyCustomAnimation(anim, state, animState, ext);
+    }
+
+    // Override setArmAngle instead of translateToHand (which doesn't exist in 1.21 mappings)
+    // This is called by ItemInHandRenderer to position the matrices before rendering the item.
+    @Override
+    public void setArmAngle(PlayerEntityRenderState state, Arm arm, MatrixStack matrices) {
+        // 1. Apply the standard arm transformation (Move to shoulder, rotate arm)
+        super.setArmAngle(state, arm, matrices);
+
+        // 2. Apply our custom Item Bone transformation
+        // This transformation happens "at the hand" because super.setArmAngle has already moved the matrix there.
+        ModelPart itemBone = (arm == Arm.RIGHT) ? this.wowmod$rightItem : this.wowmod$leftItem;
+
+        if (itemBone != null) {
+            // Manual transformation application
+
+            // Translate (offset from parent/hand)
+            // ModelPart coordinates are usually in 16ths of a block (pixels)
+            matrices.translate(itemBone.originX / 16.0F, itemBone.originY / 16.0F, itemBone.originZ / 16.0F);
+
+            // Rotate
+            if (itemBone.roll != 0.0F || itemBone.yaw != 0.0F || itemBone.pitch != 0.0F) {
+                matrices.multiply(new Quaternionf().rotationZYX(itemBone.roll, itemBone.yaw, itemBone.pitch));
+            }
+
+            // Scale
+            if (itemBone.xScale != 1.0F || itemBone.yScale != 1.0F || itemBone.zScale != 1.0F) {
+                matrices.scale(itemBone.xScale, itemBone.yScale, itemBone.zScale);
+            }
+        }
     }
 
     @Unique
@@ -100,12 +142,24 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             wowmod$isCustomJumpActive = true;
         }
 
+        // --- UPDATED LANDING LOGIC START ---
         if (onGround && (wowmod$isCustomJumpActive || timeSinceLand < 10)) {
             if (timeSinceLand >= 10) {
                 wowmod$isCustomJumpActive = false;
             }
-            return PlayerAnimationState.LANDING;
+
+            // Check limbSwingAmplitude to determine if player is physically moving
+            if (state.limbSwingAmplitude > 0.1f) {
+                if (ext.wowmod$isSprinting()) {
+                    return PlayerAnimationState.LANDING_SPRINTING;
+                } else {
+                    return PlayerAnimationState.LANDING_WALKING;
+                }
+            } else {
+                return PlayerAnimationState.LANDING_IDLE;
+            }
         }
+        // --- UPDATED LANDING LOGIC END ---
 
         if (!onGround) {
             if (wowmod$isCustomJumpActive) {
@@ -127,11 +181,19 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         long timeSinceLand = ext.wowmod$getTimeSinceLanding();
         float timeSeconds;
 
-        if (animState == PlayerAnimationState.LANDING) {
+        // --- UPDATED TIMING LOGIC START ---
+        // Treat all landing states as one-shot animations based on timeSinceLand
+        if (animState == PlayerAnimationState.LANDING_IDLE ||
+                animState == PlayerAnimationState.LANDING_WALKING ||
+                animState == PlayerAnimationState.LANDING_SPRINTING) {
+
+            // Map 10 ticks to the full length of the animation
             timeSeconds = Math.min(timeSinceLand / 10.0f * anim.animation_length, anim.animation_length);
         } else {
+            // Standard looping logic for other states
             timeSeconds = (state.age * 0.05f) % anim.animation_length;
         }
+        // --- UPDATED TIMING LOGIC END ---
 
         float headY = 0.0f;
         float bodyY = 0.0f;
@@ -143,6 +205,10 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
 
         Animation.Bone rightArmBone = anim.bones.get("rightArm");
         Animation.Bone leftArmBone = anim.bones.get("leftArm");
+
+        // Fetch item bones
+        Animation.Bone rightItemBone = anim.bones.get("rightItem");
+        Animation.Bone leftItemBone = anim.bones.get("leftItem");
 
         if (animState != PlayerAnimationState.SNEAKING) {
             applyBone(this.body, anim.bones.get("body"), timeSeconds, 0, bodyY, 0);
@@ -193,16 +259,36 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
                 applyBone(this.leftArm, leftArmBone, timeSeconds, bodyOffsetX + leftArmX, bodyOffsetY + armY, bodyOffsetZ);
             }
         }
+
+        // Apply animations to item bones.
+        // We use 0,0,0 as default because the base offset (to the hand) is handled in setArmAngle via matrix translation.
+        applyBone(this.wowmod$rightItem, rightItemBone, timeSeconds, 0, 0, 0);
+        applyBone(this.wowmod$leftItem, leftItemBone, timeSeconds, 0, 0, 0);
     }
 
     private void applyBone(ModelPart part, Animation.Bone boneData, float time, float defaultX, float defaultY, float defaultZ) {
-        if (part == null || boneData == null) return;
+        if (part == null) return;
+
+        // Even if boneData is null, we must reset the part to default to avoid "sticking" animations
+        if (boneData == null) {
+            part.originX = defaultX;
+            part.originY = defaultY;
+            part.originZ = defaultZ;
+            part.pitch = 0;
+            part.yaw = 0;
+            part.roll = 0;
+            return;
+        }
 
         if (boneData.rotation != null) {
             float[] rot = getInterpolatedValue(boneData.rotation, time);
             part.pitch = (float) Math.toRadians(rot[0]);
             part.yaw = (float) Math.toRadians(rot[1]);
             part.roll = (float) Math.toRadians(rot[2]);
+        } else {
+            part.pitch = 0;
+            part.yaw = 0;
+            part.roll = 0;
         }
 
         if (boneData.position != null) {

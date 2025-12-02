@@ -22,7 +22,9 @@ public class WeaponAnimationConfig {
         // 2. Macro Match: Handle "jumping" shorthand
         if (state == PlayerAnimationState.JUMP_ASCEND ||
                 state == PlayerAnimationState.JUMP_DESCENT ||
-                state == PlayerAnimationState.LANDING) {
+                state == PlayerAnimationState.LANDING_IDLE ||
+                state == PlayerAnimationState.LANDING_WALKING ||
+                state == PlayerAnimationState.LANDING_SPRINTING) {
 
             // Check if the user defined a generic "jumping" key
             String jumpingBase = animations.get("jumping");
@@ -32,7 +34,9 @@ public class WeaponAnimationConfig {
                 String suffix = switch (state) {
                     case JUMP_ASCEND -> "_1";
                     case JUMP_DESCENT -> "_2";
-                    case LANDING -> "_3";
+                    case LANDING_IDLE -> "_3";
+                    case LANDING_WALKING -> "_4";
+                    case LANDING_SPRINTING -> "_5";
                     default -> "";
                 };
                 return Identifier.of(jumpingBase + suffix);
