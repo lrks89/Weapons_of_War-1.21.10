@@ -124,7 +124,7 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
 
     @Unique
     private PlayerAnimationState determineAnimationState(PlayerEntityRenderState state, RenderStateExtension ext) {
-        if (ext.wowmod$isFlying() || state.isGliding || ext.wowmod$isRiding() || ext.wowmod$isClimbing() || ext.wowmod$isInWater() || ext.wowmod$isSwimming()) {
+        if (state.isGliding || ext.wowmod$isRiding() || ext.wowmod$isClimbing() || ext.wowmod$isInWater() || ext.wowmod$isSwimming()) {
             wowmod$isCustomJumpActive = false;
             return PlayerAnimationState.VANILLA_OVERRIDE;
         }
