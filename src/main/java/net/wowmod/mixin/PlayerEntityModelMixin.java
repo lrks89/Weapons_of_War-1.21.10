@@ -23,6 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Collections;
 import java.util.Map;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 @Mixin(PlayerEntityModel.class)
 public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEntityRenderState> {
@@ -186,10 +187,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         float timeSeconds;
 
         if (animState == PlayerAnimationState.STANDING_ATTACK) {
-            // --- NEW: Attack Speed Scaling ---
-            // Map the swing progress (0.0 to 1.0) directly to the animation length.
-            // Because we modified LivingEntity.getHandSwingDuration via mixin,
-            // state.handSwingProgress now moves slower/faster based on weapon attributes.
             timeSeconds = state.handSwingProgress * anim.animation_length;
         } else if (animState == PlayerAnimationState.LANDING_IDLE ||
                 animState == PlayerAnimationState.LANDING_WALKING ||
@@ -199,32 +196,14 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             timeSeconds = (state.age * 0.05f) % anim.animation_length;
         }
 
-        float headY = 0.0f;
-        float bodyY = 0.0f;
-        float legX = 1.9f;
-        float legY = 12.0f;
-        float rightArmX = -5.0f;
-        float leftArmX = 5.0f;
-        float armY = 2.0f;
+        boolean isSneaking = (animState == PlayerAnimationState.SNEAKING);
 
-        Animation.Bone rightArmBone = anim.bones.get("rightArm");
-        Animation.Bone leftArmBone = anim.bones.get("leftArm");
+        // --- 1. Apply Body/Head/Leg Animation (SKIP if Sneaking) ---
+        // If sneaking, we let Vanilla handle the body crouch/lean to avoid overwriting it with "idle" upright pose.
+        if (!isSneaking) {
+            applyBone(this.body, anim.bones.get("body"), timeSeconds, 0, 0, 0);
 
-        Animation.Bone rightItemBone = anim.bones.get("rightItem");
-        Animation.Bone leftItemBone = anim.bones.get("leftItem");
-
-        if (animState != PlayerAnimationState.SNEAKING) {
-            applyBone(this.body, anim.bones.get("body"), timeSeconds, 0, bodyY, 0);
-
-            float bodyAnimX = 0, bodyAnimY = 0, bodyAnimZ = 0;
-            Animation.Bone bodyBone = anim.bones.get("body");
-            if (bodyBone != null && bodyBone.position != null) {
-                float[] pos = getInterpolatedValue(bodyBone.position, timeSeconds);
-                bodyAnimX = pos[0];
-                bodyAnimY = -pos[1];
-                bodyAnimZ = pos[2];
-            }
-
+            // Waist Pivot Logic: Adjusted to 13.0f (Top of legs) to prevent detachment
             float bodyPitch = this.body.pitch;
             float pivotY = 13.0f;
             float dY = (float) (pivotY - pivotY * Math.cos(bodyPitch));
@@ -232,44 +211,100 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             this.body.originY += dY;
             this.body.originZ += dZ;
 
-            applyBone(this.head, anim.bones.get("head"), timeSeconds, 0, headY, 0);
+            // Animate Head (Parented to Body via addition)
+            // Vanilla Sneak handles this automatically, so we only do it for custom states
+            applyBone(this.head, anim.bones.get("head"), timeSeconds, 0, 0, 0);
+            this.head.originX += this.body.originX;
+            this.head.originY += this.body.originY;
+            this.head.originZ += this.body.originZ;
 
-            float shoulderY = 2.0f;
-            float sDY = (float) (shoulderY * Math.cos(bodyPitch) - shoulderY);
-            float sDZ = (float) (shoulderY * Math.sin(bodyPitch));
-
-            this.head.originX += bodyAnimX;
-            this.head.originY += dY + bodyAnimY;
-            this.head.originZ += dZ + bodyAnimZ;
-
-            applyBone(this.rightLeg, anim.bones.get("rightLeg"), timeSeconds, -legX, legY, 0);
-            applyBone(this.leftLeg, anim.bones.get("leftLeg"), timeSeconds, legX, legY, 0);
-
-            // --- NEW: Allow Arms to Animate if Attacking ---
-            boolean isAttacking = (animState == PlayerAnimationState.STANDING_ATTACK);
-            // We animate arms if we are attacking OR if vanilla isn't doing anything with them (not swinging, not using item)
-            boolean shouldAnimateArms = isAttacking || (state.handSwingProgress == 0.0f && !state.isUsingItem);
-
-            if (shouldAnimateArms) {
-                float armBaseY = armY + dY + sDY + bodyAnimY;
-                float armBaseZ = 0 + dZ + sDZ + bodyAnimZ;
-
-                applyBone(this.rightArm, rightArmBone, timeSeconds, rightArmX + bodyAnimX, armBaseY, armBaseZ);
-                applyBone(this.leftArm, leftArmBone, timeSeconds, leftArmX + bodyAnimX, armBaseY, armBaseZ);
-            }
-        } else if (animState == PlayerAnimationState.SNEAKING) {
-            float bodyOffsetX = this.body.originX;
-            float bodyOffsetY = this.body.originY;
-            float bodyOffsetZ = this.body.originZ;
-
-            if (state.handSwingProgress == 0.0f && !state.isUsingItem) {
-                applyBone(this.rightArm, rightArmBone, timeSeconds, bodyOffsetX + rightArmX, bodyOffsetY + armY, bodyOffsetZ);
-                applyBone(this.leftArm, leftArmBone, timeSeconds, bodyOffsetX + leftArmX, bodyOffsetY + armY, bodyOffsetZ);
-            }
+            // Animate Legs (Independent)
+            applyBone(this.rightLeg, anim.bones.get("rightLeg"), timeSeconds, -1.9f, 12.0f, 0);
+            applyBone(this.leftLeg, anim.bones.get("leftLeg"), timeSeconds, 1.9f, 12.0f, 0);
         }
 
-        applyBone(this.wowmod$rightItem, rightItemBone, timeSeconds, 0, 0, 0);
-        applyBone(this.wowmod$leftItem, leftItemBone, timeSeconds, 0, 0, 0);
+        // --- Get Current Body Transforms ---
+        // These will be Custom if !isSneaking, or Vanilla (Crouched) if isSneaking
+        float bodyX = this.body.originX;
+        float bodyY = this.body.originY;
+        float bodyZ = this.body.originZ;
+
+        float bodyPitch = this.body.pitch;
+        float bodyYaw = this.body.yaw;
+        float bodyRoll = this.body.roll;
+
+        // --- 4. Animate Arms (Parented to Body) ---
+        // We ALWAYS apply the parent transformation.
+        // This ensures arms stick to the body even during Vanilla sneak or item usage.
+
+        boolean isAttacking = (animState == PlayerAnimationState.STANDING_ATTACK);
+        boolean shouldAnimateArms = isAttacking || (state.handSwingProgress == 0.0f && !state.isUsingItem);
+
+        // Save vanilla rotations
+        float vanillaRightPitch = this.rightArm.pitch;
+        float vanillaRightYaw = this.rightArm.yaw;
+        float vanillaRightRoll = this.rightArm.roll;
+
+        float vanillaLeftPitch = this.leftArm.pitch;
+        float vanillaLeftYaw = this.leftArm.yaw;
+        float vanillaLeftRoll = this.leftArm.roll;
+
+        // --- RIGHT ARM PARENTING ---
+        Animation.Bone rightArmBone = anim.bones.get("rightArm");
+
+        // Define offset: (-5, 2, 0) relative to Body
+        Vector3f rightArmOffset = new Vector3f(-5.0f, 2.0f, 0.0f);
+
+        // Rotate this offset by the Body's rotation
+        rightArmOffset.rotate(new Quaternionf().rotationZYX(bodyRoll, bodyYaw, bodyPitch));
+
+        if (shouldAnimateArms) {
+            // Apply Custom Animation
+            applyBone(this.rightArm, rightArmBone, timeSeconds, 0, 0, 0);
+
+            // Add Body Rotation (Parenting)
+            this.rightArm.pitch += bodyPitch;
+            this.rightArm.yaw += bodyYaw;
+            this.rightArm.roll += bodyRoll;
+        } else {
+            // Restore vanilla rotation + Add Body Rotation
+            this.rightArm.pitch = vanillaRightPitch + bodyPitch;
+            this.rightArm.yaw = vanillaRightYaw + bodyYaw;
+            this.rightArm.roll = vanillaRightRoll + bodyRoll;
+        }
+
+        // Set Absolute Position: Body Position + Rotated Shoulder Offset
+        this.rightArm.originX = bodyX + rightArmOffset.x;
+        this.rightArm.originY = bodyY + rightArmOffset.y;
+        this.rightArm.originZ = bodyZ + rightArmOffset.z;
+
+
+        // --- LEFT ARM PARENTING ---
+        Animation.Bone leftArmBone = anim.bones.get("leftArm");
+
+        Vector3f leftArmOffset = new Vector3f(5.0f, 2.0f, 0.0f);
+        leftArmOffset.rotate(new Quaternionf().rotationZYX(bodyRoll, bodyYaw, bodyPitch));
+
+        if (shouldAnimateArms) {
+            applyBone(this.leftArm, leftArmBone, timeSeconds, 0, 0, 0);
+
+            this.leftArm.pitch += bodyPitch;
+            this.leftArm.yaw += bodyYaw;
+            this.leftArm.roll += bodyRoll;
+        } else {
+            this.leftArm.pitch = vanillaLeftPitch + bodyPitch;
+            this.leftArm.yaw = vanillaLeftYaw + bodyYaw;
+            this.leftArm.roll = vanillaLeftRoll + bodyRoll;
+        }
+
+        this.leftArm.originX = bodyX + leftArmOffset.x;
+        this.leftArm.originY = bodyY + leftArmOffset.y;
+        this.leftArm.originZ = bodyZ + leftArmOffset.z;
+
+
+        // --- 5. Animate Items (Parented to Hand) ---
+        applyBone(this.wowmod$rightItem, anim.bones.get("rightItem"), timeSeconds, 0, 0, 0);
+        applyBone(this.wowmod$leftItem, anim.bones.get("leftItem"), timeSeconds, 0, 0, 0);
     }
 
     private void applyBone(ModelPart part, Animation.Bone boneData, float time, float defaultX, float defaultY, float defaultZ) {
