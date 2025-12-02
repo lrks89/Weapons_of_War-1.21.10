@@ -4,6 +4,6 @@
     "walking": "wowmod:walking_default",
     "sprinting": "wowmod:sprinting_polearm_one_handed",
     "jumping": "wowmod:jumping_polearm",
-    "standing_attack": "wowmod:attack_standing_polearm_one_handed_thrust"
+    "standing_attack": "wowmod:test_2"
   }
 }

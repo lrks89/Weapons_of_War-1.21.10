@@ -129,6 +129,12 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             return PlayerAnimationState.VANILLA_OVERRIDE;
         }
 
+        // --- NEW: Attack Detection ---
+        // If handSwingProgress > 0, we are in the middle of a swing
+        if (state.handSwingProgress > 0.0f) {
+            return PlayerAnimationState.STANDING_ATTACK;
+        }
+
         if (state.sneaking) {
             wowmod$isCustomJumpActive = false;
             return PlayerAnimationState.SNEAKING;
@@ -142,7 +148,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             wowmod$isCustomJumpActive = true;
         }
 
-        // --- UPDATED LANDING LOGIC START ---
         if (onGround && (wowmod$isCustomJumpActive || timeSinceLand < 10)) {
             if (timeSinceLand >= 10) {
                 wowmod$isCustomJumpActive = false;
@@ -159,7 +164,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
                 return PlayerAnimationState.LANDING_IDLE;
             }
         }
-        // --- UPDATED LANDING LOGIC END ---
 
         if (!onGround) {
             if (wowmod$isCustomJumpActive) {
@@ -181,19 +185,19 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         long timeSinceLand = ext.wowmod$getTimeSinceLanding();
         float timeSeconds;
 
-        // --- UPDATED TIMING LOGIC START ---
-        // Treat all landing states as one-shot animations based on timeSinceLand
-        if (animState == PlayerAnimationState.LANDING_IDLE ||
+        if (animState == PlayerAnimationState.STANDING_ATTACK) {
+            // --- NEW: Attack Speed Scaling ---
+            // Map the swing progress (0.0 to 1.0) directly to the animation length.
+            // Because we modified LivingEntity.getHandSwingDuration via mixin,
+            // state.handSwingProgress now moves slower/faster based on weapon attributes.
+            timeSeconds = state.handSwingProgress * anim.animation_length;
+        } else if (animState == PlayerAnimationState.LANDING_IDLE ||
                 animState == PlayerAnimationState.LANDING_WALKING ||
                 animState == PlayerAnimationState.LANDING_SPRINTING) {
-
-            // Map 10 ticks to the full length of the animation
             timeSeconds = Math.min(timeSinceLand / 10.0f * anim.animation_length, anim.animation_length);
         } else {
-            // Standard looping logic for other states
             timeSeconds = (state.age * 0.05f) % anim.animation_length;
         }
-        // --- UPDATED TIMING LOGIC END ---
 
         float headY = 0.0f;
         float bodyY = 0.0f;
@@ -206,7 +210,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         Animation.Bone rightArmBone = anim.bones.get("rightArm");
         Animation.Bone leftArmBone = anim.bones.get("leftArm");
 
-        // Fetch item bones
         Animation.Bone rightItemBone = anim.bones.get("rightItem");
         Animation.Bone leftItemBone = anim.bones.get("leftItem");
 
@@ -242,7 +245,12 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             applyBone(this.rightLeg, anim.bones.get("rightLeg"), timeSeconds, -legX, legY, 0);
             applyBone(this.leftLeg, anim.bones.get("leftLeg"), timeSeconds, legX, legY, 0);
 
-            if (state.handSwingProgress == 0.0f && !state.isUsingItem) {
+            // --- NEW: Allow Arms to Animate if Attacking ---
+            boolean isAttacking = (animState == PlayerAnimationState.STANDING_ATTACK);
+            // We animate arms if we are attacking OR if vanilla isn't doing anything with them (not swinging, not using item)
+            boolean shouldAnimateArms = isAttacking || (state.handSwingProgress == 0.0f && !state.isUsingItem);
+
+            if (shouldAnimateArms) {
                 float armBaseY = armY + dY + sDY + bodyAnimY;
                 float armBaseZ = 0 + dZ + sDZ + bodyAnimZ;
 
@@ -260,8 +268,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             }
         }
 
-        // Apply animations to item bones.
-        // We use 0,0,0 as default because the base offset (to the hand) is handled in setArmAngle via matrix translation.
         applyBone(this.wowmod$rightItem, rightItemBone, timeSeconds, 0, 0, 0);
         applyBone(this.wowmod$leftItem, leftItemBone, timeSeconds, 0, 0, 0);
     }
@@ -269,7 +275,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
     private void applyBone(ModelPart part, Animation.Bone boneData, float time, float defaultX, float defaultY, float defaultZ) {
         if (part == null) return;
 
-        // Even if boneData is null, we must reset the part to default to avoid "sticking" animations
         if (boneData == null) {
             part.originX = defaultX;
             part.originY = defaultY;

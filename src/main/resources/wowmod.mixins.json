@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "ElytraFeatureRendererMixin",
+    "LivingEntityMixin",
     "PlayerEntityMixin",
     "PlayerEntityModelMixin",
     "PlayerEntityRendererMixin",

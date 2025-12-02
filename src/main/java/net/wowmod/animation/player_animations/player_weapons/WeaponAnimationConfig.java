@@ -12,6 +12,12 @@ public class WeaponAnimationConfig {
         if (animations == null) return null;
 
         String key = state.toString().toLowerCase();
+
+        // --- NEW: Specific handling for attack_standing to map to "attack" in JSON if needed ---
+        if (state == PlayerAnimationState.STANDING_ATTACK && !animations.containsKey("standing_attack") && animations.containsKey("attack")) {
+            return Identifier.of(animations.get("attack"));
+        }
+
         String animId = animations.get(key);
 
         // 1. Direct Match: If "jump_ascend" is defined explicitly, use it.
