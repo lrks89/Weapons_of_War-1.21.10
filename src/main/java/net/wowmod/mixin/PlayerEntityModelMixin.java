@@ -112,6 +112,8 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             matrices.translate(itemBone.originX / 16.0F, itemBone.originY / 16.0F, itemBone.originZ / 16.0F);
 
             // Rotate
+            // Reverted to positive pitch. If it was angling down before, and up with negative,
+            // the issue is likely not here but in the interaction between arm rotation and item rotation.
             if (itemBone.roll != 0.0F || itemBone.yaw != 0.0F || itemBone.pitch != 0.0F) {
                 matrices.multiply(new Quaternionf().rotationZYX(itemBone.roll, itemBone.yaw, itemBone.pitch));
             }
@@ -203,9 +205,9 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         if (!isSneaking) {
             applyBone(this.body, anim.bones.get("body"), timeSeconds, 0, 0, 0);
 
-            // Waist Pivot Logic: Adjusted to 13.0f (Top of legs) to prevent detachment
+            // Waist Pivot Logic: Adjusted to 12.0f (Top of legs) to prevent detachment
             float bodyPitch = this.body.pitch;
-            float pivotY = 13.0f;
+            float pivotY = 12.0f;
             float dY = (float) (pivotY - pivotY * Math.cos(bodyPitch));
             float dZ = (float) -(pivotY * Math.sin(bodyPitch));
             this.body.originY += dY;
