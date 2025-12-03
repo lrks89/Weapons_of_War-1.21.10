@@ -7,11 +7,11 @@ public enum PlayerAnimationState {
     IDLE("idle_default"),
     WALKING("walking_default"),
     SPRINTING("sprinting_default"),
-    JUMP_ASCEND("jumping_ascend_default"),
-    JUMP_DESCENT("jumping_descent_default"),
-    LANDING_IDLE("jumping_landing_idle_default"),
-    LANDING_WALKING("jumping_landing_walking_default"),
-    LANDING_SPRINTING("jumping_landing_sprinting_default"),
+    JUMP_ASCEND("jumping_ascending_default"),
+    JUMP_DESCENT("jumping_descending_default"),
+    LANDING_IDLE("jumping_landing_default"),
+    LANDING_WALKING("walking_default"),
+    LANDING_SPRINTING("sprinting_default"),
     FALLING("jumping_descent_default"),
     STANDING_ATTACK("attack_standing_default");
 
