@@ -209,60 +209,93 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         // --- 0. Animate Controller Bone ---
         BoneModifier.applyBone(this.wowmod$controller, anim.bones.get("controller"), timeSeconds, 0, 0, 0);
 
-        // --- 1. Apply Body/Head/Leg Animation (SKIP if Sneaking) ---
+        // Calculate Controller Rotation Matrix
+        Quaternionf controllerRot = new Quaternionf().rotationZYX(
+                this.wowmod$controller.roll,
+                this.wowmod$controller.yaw,
+                this.wowmod$controller.pitch
+        );
+
+        // --- 1. Apply Body Animation ---
         if (!isSneaking) {
             BoneModifier.applyBone(this.body, anim.bones.get("body"), timeSeconds, 0, 0, 0);
 
-            // Apply Controller Parent to Body
-            this.body.originX += this.wowmod$controller.originX;
-            this.body.originY += this.wowmod$controller.originY;
-            this.body.originZ += this.wowmod$controller.originZ;
+            // Add rotation (simple addition for Euler angles)
             this.body.pitch += this.wowmod$controller.pitch;
             this.body.yaw += this.wowmod$controller.yaw;
             this.body.roll += this.wowmod$controller.roll;
 
-            // Waist Pivot Logic: Adjusted to 12.0f (Top of legs) to prevent detachment
+            // Apply Waist Pivot Logic (Leaning)
             float bodyPitch = this.body.pitch;
             float pivotY = 12.0f;
             float dY = (float) (pivotY - pivotY * Math.cos(bodyPitch));
             float dZ = (float) -(pivotY * Math.sin(bodyPitch));
-            this.body.originY += dY;
-            this.body.originZ += dZ;
 
-            // Animate Head (Parented to Body via addition)
+            // Get local position and add pivot offset
+            Vector3f bodyPos = new Vector3f(this.body.originX, this.body.originY + dY, this.body.originZ + dZ);
+
+            // Orbit Body around Controller
+            bodyPos.rotate(controllerRot);
+
+            // Set Final Position
+            this.body.originX = this.wowmod$controller.originX + bodyPos.x;
+            this.body.originY = this.wowmod$controller.originY + bodyPos.y;
+            this.body.originZ = this.wowmod$controller.originZ + bodyPos.z;
+        }
+
+        // Calculate Body Rotation Matrix (for children: Head/Arms)
+        Quaternionf bodyRot = new Quaternionf().rotationZYX(
+                this.body.roll,
+                this.body.yaw,
+                this.body.pitch
+        );
+
+        // --- 2. Apply Head Animation ---
+        if (!isSneaking) {
             BoneModifier.applyBone(this.head, anim.bones.get("head"), timeSeconds, 0, 0, 0);
-            this.head.originX += this.body.originX;
-            this.head.originY += this.body.originY;
-            this.head.originZ += this.body.originZ;
 
-            // Animate Legs (Independent)
+            // Add rotation
+            this.head.pitch += this.body.pitch;
+            this.head.yaw += this.body.yaw;
+            this.head.roll += this.body.roll;
+
+            // Orbit Head around Body
+            Vector3f headPos = new Vector3f(this.head.originX, this.head.originY, this.head.originZ);
+            headPos.rotate(bodyRot);
+
+            this.head.originX = this.body.originX + headPos.x;
+            this.head.originY = this.body.originY + headPos.y;
+            this.head.originZ = this.body.originZ + headPos.z;
+        }
+
+        // --- 3. Apply Leg Animations (Independent of Body, Parented to Controller) ---
+        if (!isSneaking) {
             BoneModifier.applyBone(this.rightLeg, anim.bones.get("rightLeg"), timeSeconds, -1.9f, 12.0f, 0);
             BoneModifier.applyBone(this.leftLeg, anim.bones.get("leftLeg"), timeSeconds, 1.9f, 12.0f, 0);
 
-            // Apply Controller Parent to Legs (Simple Parenting)
-            this.rightLeg.originX += this.wowmod$controller.originX;
-            this.rightLeg.originY += this.wowmod$controller.originY;
-            this.rightLeg.originZ += this.wowmod$controller.originZ;
             this.rightLeg.pitch += this.wowmod$controller.pitch;
             this.rightLeg.yaw += this.wowmod$controller.yaw;
             this.rightLeg.roll += this.wowmod$controller.roll;
 
-            this.leftLeg.originX += this.wowmod$controller.originX;
-            this.leftLeg.originY += this.wowmod$controller.originY;
-            this.leftLeg.originZ += this.wowmod$controller.originZ;
             this.leftLeg.pitch += this.wowmod$controller.pitch;
             this.leftLeg.yaw += this.wowmod$controller.yaw;
             this.leftLeg.roll += this.wowmod$controller.roll;
+
+            // Orbit Legs around Controller
+            Vector3f rightLegPos = new Vector3f(this.rightLeg.originX, this.rightLeg.originY, this.rightLeg.originZ);
+            Vector3f leftLegPos = new Vector3f(this.leftLeg.originX, this.leftLeg.originY, this.leftLeg.originZ);
+
+            rightLegPos.rotate(controllerRot);
+            leftLegPos.rotate(controllerRot);
+
+            this.rightLeg.originX = this.wowmod$controller.originX + rightLegPos.x;
+            this.rightLeg.originY = this.wowmod$controller.originY + rightLegPos.y;
+            this.rightLeg.originZ = this.wowmod$controller.originZ + rightLegPos.z;
+
+            this.leftLeg.originX = this.wowmod$controller.originX + leftLegPos.x;
+            this.leftLeg.originY = this.wowmod$controller.originY + leftLegPos.y;
+            this.leftLeg.originZ = this.wowmod$controller.originZ + leftLegPos.z;
         }
-
-        // --- Get Current Body Transforms ---
-        float bodyX = this.body.originX;
-        float bodyY = this.body.originY;
-        float bodyZ = this.body.originZ;
-
-        float bodyPitch = this.body.pitch;
-        float bodyYaw = this.body.yaw;
-        float bodyRoll = this.body.roll;
 
         // --- 4. Animate Arms (Parented to Body) ---
         boolean isAttacking = (animState == PlayerAnimationState.STANDING_ATTACK);
@@ -277,71 +310,63 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         float vanillaLeftYaw = this.leftArm.yaw;
         float vanillaLeftRoll = this.leftArm.roll;
 
-        // --- RIGHT ARM PARENTING ---
+        // RIGHT ARM
         Animation.Bone rightArmBone = anim.bones.get("rightArm");
-
-        // Define offset: (-5, 2, 0) relative to Body
-        // Adjusted the offset logic to be simpler and relative to the body's rotation center
-        Vector3f rightArmOffset = new Vector3f(-5.0f, 2.0f, 0.0f);
-
-        // Rotate this offset by the Body's rotation
-        rightArmOffset.rotate(new Quaternionf().rotationZYX(bodyRoll, bodyYaw, bodyPitch));
-
         if (shouldAnimateArms) {
-            // Apply Custom Animation - FORCE RESET if data is missing but we want to animate
+            // Apply Custom (Offset -5, 2, 0 passed as default)
             if (rightArmBone != null) {
-                BoneModifier.applyBone(this.rightArm, rightArmBone, timeSeconds, 0, 0, 0);
+                BoneModifier.applyBone(this.rightArm, rightArmBone, timeSeconds, -5.0f, 2.0f, 0.0f);
             } else {
-                this.rightArm.pitch = 0;
-                this.rightArm.yaw = 0;
-                this.rightArm.roll = 0;
+                // Reset to default if bone missing but animating
+                this.rightArm.pitch = 0; this.rightArm.yaw = 0; this.rightArm.roll = 0;
+                this.rightArm.originX = -5.0f; this.rightArm.originY = 2.0f; this.rightArm.originZ = 0.0f;
             }
-
-            // Add Body Rotation (Parenting)
-            this.rightArm.pitch += bodyPitch;
-            this.rightArm.yaw += bodyYaw;
-            this.rightArm.roll += bodyRoll;
+            this.rightArm.pitch += this.body.pitch;
+            this.rightArm.yaw += this.body.yaw;
+            this.rightArm.roll += this.body.roll;
         } else {
-            // Restore vanilla rotation + Add Body Rotation
-            this.rightArm.pitch = vanillaRightPitch + bodyPitch;
-            this.rightArm.yaw = vanillaRightYaw + bodyYaw;
-            this.rightArm.roll = vanillaRightRoll + bodyRoll;
+            // Restore Vanilla + Parent Rotation
+            this.rightArm.pitch = vanillaRightPitch + this.body.pitch;
+            this.rightArm.yaw = vanillaRightYaw + this.body.yaw;
+            this.rightArm.roll = vanillaRightRoll + this.body.roll;
+            // Reset position to default offset so it can be rotated correctly
+            this.rightArm.originX = -5.0f; this.rightArm.originY = 2.0f; this.rightArm.originZ = 0.0f;
         }
 
-        // Set Absolute Position: Body Position + Rotated Shoulder Offset
-        this.rightArm.originX = bodyX + rightArmOffset.x;
-        this.rightArm.originY = bodyY + rightArmOffset.y;
-        this.rightArm.originZ = bodyZ + rightArmOffset.z;
+        // Orbit Right Arm around Body
+        Vector3f rightArmPos = new Vector3f(this.rightArm.originX, this.rightArm.originY, this.rightArm.originZ);
+        rightArmPos.rotate(bodyRot);
+        this.rightArm.originX = this.body.originX + rightArmPos.x;
+        this.rightArm.originY = this.body.originY + rightArmPos.y;
+        this.rightArm.originZ = this.body.originZ + rightArmPos.z;
 
 
-        // --- LEFT ARM PARENTING ---
+        // LEFT ARM
         Animation.Bone leftArmBone = anim.bones.get("leftArm");
-
-        Vector3f leftArmOffset = new Vector3f(5.0f, 2.0f, 0.0f);
-        leftArmOffset.rotate(new Quaternionf().rotationZYX(bodyRoll, bodyYaw, bodyPitch));
-
         if (shouldAnimateArms) {
-            // Apply Custom Animation - FORCE RESET
+            // Apply Custom (Offset 5, 2, 0 passed as default)
             if (leftArmBone != null) {
-                BoneModifier.applyBone(this.leftArm, leftArmBone, timeSeconds, 0, 0, 0);
+                BoneModifier.applyBone(this.leftArm, leftArmBone, timeSeconds, 5.0f, 2.0f, 0.0f);
             } else {
-                this.leftArm.pitch = 0;
-                this.leftArm.yaw = 0;
-                this.leftArm.roll = 0;
+                this.leftArm.pitch = 0; this.leftArm.yaw = 0; this.leftArm.roll = 0;
+                this.leftArm.originX = 5.0f; this.leftArm.originY = 2.0f; this.leftArm.originZ = 0.0f;
             }
-
-            this.leftArm.pitch += bodyPitch;
-            this.leftArm.yaw += bodyYaw;
-            this.leftArm.roll += bodyRoll;
+            this.leftArm.pitch += this.body.pitch;
+            this.leftArm.yaw += this.body.yaw;
+            this.leftArm.roll += this.body.roll;
         } else {
-            this.leftArm.pitch = vanillaLeftPitch + bodyPitch;
-            this.leftArm.yaw = vanillaLeftYaw + bodyYaw;
-            this.leftArm.roll = vanillaLeftRoll + bodyRoll;
+            this.leftArm.pitch = vanillaLeftPitch + this.body.pitch;
+            this.leftArm.yaw = vanillaLeftYaw + this.body.yaw;
+            this.leftArm.roll = vanillaLeftRoll + this.body.roll;
+            this.leftArm.originX = 5.0f; this.leftArm.originY = 2.0f; this.leftArm.originZ = 0.0f;
         }
 
-        this.leftArm.originX = bodyX + leftArmOffset.x;
-        this.leftArm.originY = bodyY + leftArmOffset.y;
-        this.leftArm.originZ = bodyZ + leftArmOffset.z;
+        // Orbit Left Arm around Body
+        Vector3f leftArmPos = new Vector3f(this.leftArm.originX, this.leftArm.originY, this.leftArm.originZ);
+        leftArmPos.rotate(bodyRot);
+        this.leftArm.originX = this.body.originX + leftArmPos.x;
+        this.leftArm.originY = this.body.originY + leftArmPos.y;
+        this.leftArm.originZ = this.body.originZ + leftArmPos.z;
 
 
         // --- 5. Animate Items (Parented to Hand) ---
