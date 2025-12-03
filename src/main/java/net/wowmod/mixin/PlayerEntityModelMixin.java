@@ -1,5 +1,8 @@
 package net.wowmod.mixin;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
@@ -11,6 +14,7 @@ import net.minecraft.util.Identifier;
 import net.wowmod.animation.player_animations.PlayerAnimationState;
 import net.wowmod.animation.player_animations.Animation;
 import net.wowmod.animation.player_animations.AnimationLoader;
+import net.wowmod.animation.player_animations.BoneModifier;
 import net.wowmod.animation.player_animations.player_weapons.WeaponAnimationConfig;
 import net.wowmod.animation.player_animations.player_weapons.WeaponAnimationLoader;
 import net.wowmod.util.RenderStateExtension;
@@ -21,16 +25,17 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Collections;
-import java.util.Map;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
+@SuppressWarnings("deprecation")
 @Mixin(PlayerEntityModel.class)
 public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEntityRenderState> {
 
     @Unique private static boolean wowmod$isCustomJumpActive = false;
 
-    // Virtual bones for items
+    // Virtual bones
+    @Unique public ModelPart wowmod$controller; // The new Controller Bone
     @Unique public ModelPart wowmod$rightItem;
     @Unique public ModelPart wowmod$leftItem;
 
@@ -42,6 +47,7 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
     @Inject(method = "<init>", at = @At("TAIL"))
     public void initItemBones(ModelPart root, boolean thinArms, CallbackInfo ci) {
         // Create empty parts (no cubes) solely for transformation
+        this.wowmod$controller = new ModelPart(Collections.emptyList(), Collections.emptyMap());
         this.wowmod$rightItem = new ModelPart(Collections.emptyList(), Collections.emptyMap());
         this.wowmod$leftItem = new ModelPart(Collections.emptyList(), Collections.emptyMap());
     }
@@ -112,8 +118,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             matrices.translate(itemBone.originX / 16.0F, itemBone.originY / 16.0F, itemBone.originZ / 16.0F);
 
             // Rotate
-            // Reverted to positive pitch. If it was angling down before, and up with negative,
-            // the issue is likely not here but in the interaction between arm rotation and item rotation.
             if (itemBone.roll != 0.0F || itemBone.yaw != 0.0F || itemBone.pitch != 0.0F) {
                 matrices.multiply(new Quaternionf().rotationZYX(itemBone.roll, itemBone.yaw, itemBone.pitch));
             }
@@ -200,10 +204,20 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
 
         boolean isSneaking = (animState == PlayerAnimationState.SNEAKING);
 
+        // --- 0. Animate Controller Bone ---
+        BoneModifier.applyBone(this.wowmod$controller, anim.bones.get("controller"), timeSeconds, 0, 0, 0);
+
         // --- 1. Apply Body/Head/Leg Animation (SKIP if Sneaking) ---
-        // If sneaking, we let Vanilla handle the body crouch/lean to avoid overwriting it with "idle" upright pose.
         if (!isSneaking) {
-            applyBone(this.body, anim.bones.get("body"), timeSeconds, 0, 0, 0);
+            BoneModifier.applyBone(this.body, anim.bones.get("body"), timeSeconds, 0, 0, 0);
+
+            // Apply Controller Parent to Body
+            this.body.originX += this.wowmod$controller.originX;
+            this.body.originY += this.wowmod$controller.originY;
+            this.body.originZ += this.wowmod$controller.originZ;
+            this.body.pitch += this.wowmod$controller.pitch;
+            this.body.yaw += this.wowmod$controller.yaw;
+            this.body.roll += this.wowmod$controller.roll;
 
             // Waist Pivot Logic: Adjusted to 12.0f (Top of legs) to prevent detachment
             float bodyPitch = this.body.pitch;
@@ -214,19 +228,32 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             this.body.originZ += dZ;
 
             // Animate Head (Parented to Body via addition)
-            // Vanilla Sneak handles this automatically, so we only do it for custom states
-            applyBone(this.head, anim.bones.get("head"), timeSeconds, 0, 0, 0);
+            BoneModifier.applyBone(this.head, anim.bones.get("head"), timeSeconds, 0, 0, 0);
             this.head.originX += this.body.originX;
             this.head.originY += this.body.originY;
             this.head.originZ += this.body.originZ;
 
             // Animate Legs (Independent)
-            applyBone(this.rightLeg, anim.bones.get("rightLeg"), timeSeconds, -1.9f, 12.0f, 0);
-            applyBone(this.leftLeg, anim.bones.get("leftLeg"), timeSeconds, 1.9f, 12.0f, 0);
+            BoneModifier.applyBone(this.rightLeg, anim.bones.get("rightLeg"), timeSeconds, -1.9f, 12.0f, 0);
+            BoneModifier.applyBone(this.leftLeg, anim.bones.get("leftLeg"), timeSeconds, 1.9f, 12.0f, 0);
+
+            // Apply Controller Parent to Legs (Simple Parenting)
+            this.rightLeg.originX += this.wowmod$controller.originX;
+            this.rightLeg.originY += this.wowmod$controller.originY;
+            this.rightLeg.originZ += this.wowmod$controller.originZ;
+            this.rightLeg.pitch += this.wowmod$controller.pitch;
+            this.rightLeg.yaw += this.wowmod$controller.yaw;
+            this.rightLeg.roll += this.wowmod$controller.roll;
+
+            this.leftLeg.originX += this.wowmod$controller.originX;
+            this.leftLeg.originY += this.wowmod$controller.originY;
+            this.leftLeg.originZ += this.wowmod$controller.originZ;
+            this.leftLeg.pitch += this.wowmod$controller.pitch;
+            this.leftLeg.yaw += this.wowmod$controller.yaw;
+            this.leftLeg.roll += this.wowmod$controller.roll;
         }
 
         // --- Get Current Body Transforms ---
-        // These will be Custom if !isSneaking, or Vanilla (Crouched) if isSneaking
         float bodyX = this.body.originX;
         float bodyY = this.body.originY;
         float bodyZ = this.body.originZ;
@@ -236,9 +263,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         float bodyRoll = this.body.roll;
 
         // --- 4. Animate Arms (Parented to Body) ---
-        // We ALWAYS apply the parent transformation.
-        // This ensures arms stick to the body even during Vanilla sneak or item usage.
-
         boolean isAttacking = (animState == PlayerAnimationState.STANDING_ATTACK);
         boolean shouldAnimateArms = isAttacking || (state.handSwingProgress == 0.0f && !state.isUsingItem);
 
@@ -255,14 +279,21 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         Animation.Bone rightArmBone = anim.bones.get("rightArm");
 
         // Define offset: (-5, 2, 0) relative to Body
+        // Adjusted the offset logic to be simpler and relative to the body's rotation center
         Vector3f rightArmOffset = new Vector3f(-5.0f, 2.0f, 0.0f);
 
         // Rotate this offset by the Body's rotation
         rightArmOffset.rotate(new Quaternionf().rotationZYX(bodyRoll, bodyYaw, bodyPitch));
 
         if (shouldAnimateArms) {
-            // Apply Custom Animation
-            applyBone(this.rightArm, rightArmBone, timeSeconds, 0, 0, 0);
+            // Apply Custom Animation - FORCE RESET if data is missing but we want to animate
+            if (rightArmBone != null) {
+                BoneModifier.applyBone(this.rightArm, rightArmBone, timeSeconds, 0, 0, 0);
+            } else {
+                this.rightArm.pitch = 0;
+                this.rightArm.yaw = 0;
+                this.rightArm.roll = 0;
+            }
 
             // Add Body Rotation (Parenting)
             this.rightArm.pitch += bodyPitch;
@@ -288,7 +319,14 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         leftArmOffset.rotate(new Quaternionf().rotationZYX(bodyRoll, bodyYaw, bodyPitch));
 
         if (shouldAnimateArms) {
-            applyBone(this.leftArm, leftArmBone, timeSeconds, 0, 0, 0);
+            // Apply Custom Animation - FORCE RESET
+            if (leftArmBone != null) {
+                BoneModifier.applyBone(this.leftArm, leftArmBone, timeSeconds, 0, 0, 0);
+            } else {
+                this.leftArm.pitch = 0;
+                this.leftArm.yaw = 0;
+                this.leftArm.roll = 0;
+            }
 
             this.leftArm.pitch += bodyPitch;
             this.leftArm.yaw += bodyYaw;
@@ -305,83 +343,7 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
 
 
         // --- 5. Animate Items (Parented to Hand) ---
-        applyBone(this.wowmod$rightItem, anim.bones.get("rightItem"), timeSeconds, 0, 0, 0);
-        applyBone(this.wowmod$leftItem, anim.bones.get("leftItem"), timeSeconds, 0, 0, 0);
-    }
-
-    private void applyBone(ModelPart part, Animation.Bone boneData, float time, float defaultX, float defaultY, float defaultZ) {
-        if (part == null) return;
-
-        if (boneData == null) {
-            part.originX = defaultX;
-            part.originY = defaultY;
-            part.originZ = defaultZ;
-            part.pitch = 0;
-            part.yaw = 0;
-            part.roll = 0;
-            return;
-        }
-
-        if (boneData.rotation != null) {
-            float[] rot = getInterpolatedValue(boneData.rotation, time);
-            part.pitch = (float) Math.toRadians(rot[0]);
-            part.yaw = (float) Math.toRadians(rot[1]);
-            part.roll = (float) Math.toRadians(rot[2]);
-        } else {
-            part.pitch = 0;
-            part.yaw = 0;
-            part.roll = 0;
-        }
-
-        if (boneData.position != null) {
-            float[] pos = getInterpolatedValue(boneData.position, time);
-            part.originX = defaultX + pos[0];
-            part.originY = defaultY - pos[1];
-            part.originZ = defaultZ + pos[2];
-        } else {
-            part.originX = defaultX;
-            part.originY = defaultY;
-            part.originZ = defaultZ;
-        }
-    }
-
-    private float[] getInterpolatedValue(Map<String, float[]> keyframes, float time) {
-        float prevTime = 0;
-        float nextTime = 0;
-        float[] prevVal = null;
-        float[] nextVal = null;
-
-        for (String key : keyframes.keySet()) {
-            float t = Float.parseFloat(key);
-            float[] v = keyframes.get(key);
-
-            if (t <= time) {
-                if (prevVal == null || t > prevTime) {
-                    prevTime = t;
-                    prevVal = v;
-                }
-            }
-            if (t >= time) {
-                if (nextVal == null || t < nextTime || (nextVal != null && t == nextTime && t == 0)) {
-                    nextTime = t;
-                    nextVal = v;
-                }
-            }
-        }
-
-        if (prevVal == null) return nextVal != null ? nextVal : new float[]{0,0,0};
-        if (nextVal == null) return prevVal;
-        if (prevTime == nextTime) return prevVal;
-
-        float alpha = (time - prevTime) / (nextTime - prevTime);
-        return new float[] {
-                lerp(prevVal[0], nextVal[0], alpha),
-                lerp(prevVal[1], nextVal[1], alpha),
-                lerp(prevVal[2], nextVal[2], alpha)
-        };
-    }
-
-    private float lerp(float start, float end, float alpha) {
-        return start + alpha * (end - start);
+        BoneModifier.applyBone(this.wowmod$rightItem, anim.bones.get("rightItem"), timeSeconds, 0, 0, 0);
+        BoneModifier.applyBone(this.wowmod$leftItem, anim.bones.get("leftItem"), timeSeconds, 0, 0, 0);
     }
 }
