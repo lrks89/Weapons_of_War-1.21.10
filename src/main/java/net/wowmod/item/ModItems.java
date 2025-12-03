@@ -30,10 +30,10 @@ public class ModItems {
 
     // --- WEAPONS ---
     public static final Item M1113A_DAGGER = registerItem("m1113a_dagger",
-            WeaponItem::new, createWeaponSettings(3.0, -1.2f, -0.5));
+            WeaponItem::new, createWeaponSettings(3.0, -1.8f, -0.5));
 
     public static final Item M1213A_SHORTSWORD = registerItem("m1213a_shortsword",
-            WeaponItem::new, createWeaponSettings(4.0, -2.0f, 0.0));
+            WeaponItem::new, createWeaponSettings(4.0, -2.2f, 0.0));
 
     public static final Item M1223A_LONGSWORD = registerItem("m1223a_longsword",
             WeaponItem::new, createWeaponSettings(6.0, -2.6f, 0.5));
@@ -42,7 +42,7 @@ public class ModItems {
             WeaponItem::new, createWeaponSettings(8.0, -3.0f, 1.0));
 
     public static final Item M2613A_SPEAR = registerItem("m2613a_spear",
-            WeaponItem::new, createWeaponSettings(5.0, -2.8f, 2.0));
+            WeaponItem::new, createWeaponSettings(5.0, -2.6f, 2.0));
 
     // --- HELPER METHODS ---
 
