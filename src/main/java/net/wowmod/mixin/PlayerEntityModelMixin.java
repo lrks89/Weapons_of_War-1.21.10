@@ -151,7 +151,9 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         boolean onGround = ext.wowmod$isOnGround();
         long timeSinceLand = ext.wowmod$getTimeSinceLanding();
 
-        if (onGround && vy > 0.05f) {
+        // FIX: Allow activation if strictly on ground OR if clearly moving up while airborne
+        // Adding (!onGround && vy > 0.2f) helps catch the frame immediately after leaving the ground
+        if ((onGround && vy > 0.05f) || (!onGround && vy > 0.2f)) {
             wowmod$isCustomJumpActive = true;
         }
 
@@ -174,7 +176,7 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
 
         if (!onGround) {
             if (wowmod$isCustomJumpActive) {
-                return (vy > 0.05f) ? PlayerAnimationState.JUMP_ASCEND : PlayerAnimationState.JUMP_DESCENT;
+                return PlayerAnimationState.JUMPING;
             } else if (vy != 0.0f) {
                 return PlayerAnimationState.FALLING;
             }
