@@ -37,10 +37,10 @@ public class WeaponAnimationConfig {
             if (jumpingBase != null && !jumpingBase.isEmpty()) {
                 // Construct the specific ID based on the state suffix
                 String suffix = switch (state) {
-                    case JUMPING -> "_1";
-                    case LANDING_IDLE -> "_2";
-                    case LANDING_WALKING -> "_3";
-                    case LANDING_SPRINTING -> "_4";
+                    case JUMPING -> "_ascending-falling_default";
+                    case LANDING_IDLE -> "_landing_idle_default";
+                    case LANDING_WALKING -> "_jumping_landing_walking_default";
+                    case LANDING_SPRINTING -> "_jumping_landing_sprinting_default";
                     default -> "";
                 };
                 return Identifier.of(jumpingBase + suffix);
