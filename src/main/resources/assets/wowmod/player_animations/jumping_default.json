@@ -1,7 +1,7 @@
 {
 	"format_version": "1.8.0",
 	"animations": {
-		"jumping_ascending-falling_default": {
+		"jumping_default_ascending-falling": {
 			"animation_length": 3,
 			"bones": {
 				"leftArm": {
@@ -198,7 +198,7 @@
 				}
 			}
 		},
-		"jumping_landing_idle_default": {
+		"jumping_default_landing_idle": {
 			"animation_length": 0.5,
 			"bones": {
 				"leftArm": {
@@ -443,7 +443,7 @@
 				}
 			}
 		},
-		"jumping_landing_walking_default": {
+		"jumping_default_landing_walking": {
 			"animation_length": 0.5,
 			"bones": {
 				"leftArm": {
@@ -616,7 +616,7 @@
 				}
 			}
 		},
-		"jumping_landing_sprinting_default": {
+		"jumping_default_landing_sprinting": {
 			"animation_length": 0.5,
 			"bones": {
 				"leftArm": {
