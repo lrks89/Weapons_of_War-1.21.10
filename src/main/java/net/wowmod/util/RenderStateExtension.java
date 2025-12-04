@@ -38,4 +38,8 @@ public interface RenderStateExtension {
     // --- FIX: Add Main Hand Item Stack Storage ---
     ItemStack wowmod$getMainHandStack();
     void wowmod$setMainHandStack(ItemStack stack);
+
+    // --- NEW: Attack Duration for Split Animation ---
+    int wowmod$getHandSwingDuration();
+    void wowmod$setHandSwingDuration(int ticks);
 }

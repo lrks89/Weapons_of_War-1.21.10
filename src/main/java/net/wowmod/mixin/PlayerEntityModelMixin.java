@@ -35,7 +35,9 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
     @Unique private static boolean wowmod$isCustomJumpActive = false;
 
     // Virtual bones
-    @Unique public ModelPart wowmod$controller; // The new Controller Bone
+    @Unique public ModelPart wowmod$controller;
+    @Unique public ModelPart wowmod$rightHand;
+    @Unique public ModelPart wowmod$leftHand;
     @Unique public ModelPart wowmod$rightItem;
     @Unique public ModelPart wowmod$leftItem;
 
@@ -43,11 +45,11 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         super(root);
     }
 
-    // Initialize the virtual bones
     @Inject(method = "<init>", at = @At("TAIL"))
     public void initItemBones(ModelPart root, boolean thinArms, CallbackInfo ci) {
-        // Create empty parts (no cubes) solely for transformation
         this.wowmod$controller = new ModelPart(Collections.emptyList(), Collections.emptyMap());
+        this.wowmod$rightHand = new ModelPart(Collections.emptyList(), Collections.emptyMap());
+        this.wowmod$leftHand = new ModelPart(Collections.emptyList(), Collections.emptyMap());
         this.wowmod$rightItem = new ModelPart(Collections.emptyList(), Collections.emptyMap());
         this.wowmod$leftItem = new ModelPart(Collections.emptyList(), Collections.emptyMap());
     }
@@ -55,36 +57,66 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
     @Inject(method = "setAngles(Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;)V", at = @At("TAIL"))
     public void replaceAnimations(PlayerEntityRenderState state, CallbackInfo ci) {
 
-        // 1. Safely extract extended state data
         RenderStateExtension ext = (state instanceof RenderStateExtension e) ? e : null;
         if (ext == null) return;
 
-        // 2. Determine the desired animation state
         PlayerAnimationState animState = determineAnimationState(state, ext);
 
-        // 3. Handle Vanilla Override
         if (animState == PlayerAnimationState.VANILLA_OVERRIDE) {
             return;
         }
 
-        // --- CUSTOM ANIMATION LOOKUP LOGIC ---
-
         ItemStack mainHandStack = ext.wowmod$getMainHandStack();
-
         Identifier itemID = null;
         if (mainHandStack != null && !mainHandStack.isEmpty()) {
             itemID = mainHandStack.getItem().getRegistryEntry().getKey().map(key -> key.getValue()).orElse(null);
         }
 
-        // 5. Look up custom animation config for the item
         WeaponAnimationConfig config = null;
         if (itemID != null) {
             config = WeaponAnimationLoader.WEAPON_ANIMATION_CONFIGS.get(itemID);
         }
 
-        // 6. Determine final animation name
-        String finalAnimName = animState.getDefaultAnimationName();
+        // --- SPLIT ATTACK LOGIC ---
+        float customTime = -1.0f;
 
+        if (animState == PlayerAnimationState.STANDING_ATTACK && config != null) {
+            Identifier strikeID = config.getAnimation(PlayerAnimationState.ATTACK_STRIKE);
+
+            if (strikeID != null) {
+                String strikeName = strikeID.getPath().replace("player_animations/", "");
+                Animation strikeAnim = AnimationLoader.ANIMATIONS.get(strikeName);
+
+                if (strikeAnim != null) {
+                    int totalDurationTicks = ext.wowmod$getHandSwingDuration();
+                    if (totalDurationTicks <= 0) totalDurationTicks = 1;
+
+                    float currentTick = state.handSwingProgress * totalDurationTicks;
+                    float strikeLengthTicks = strikeAnim.animation_length * 20.0f;
+
+                    if (currentTick <= strikeLengthTicks) {
+                        animState = PlayerAnimationState.ATTACK_STRIKE;
+                        customTime = currentTick / 20.0f;
+                    } else {
+                        Identifier returnID = config.getAnimation(PlayerAnimationState.ATTACK_RETURN);
+                        if (returnID != null) {
+                            animState = PlayerAnimationState.ATTACK_RETURN;
+                            float returnProgress = (currentTick - strikeLengthTicks) / (totalDurationTicks - strikeLengthTicks);
+                            returnProgress = Math.max(0.0f, Math.min(1.0f, returnProgress));
+
+                            String returnName = returnID.getPath().replace("player_animations/", "");
+                            Animation returnAnim = AnimationLoader.ANIMATIONS.get(returnName);
+
+                            if (returnAnim != null) {
+                                customTime = returnProgress * returnAnim.animation_length;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        String finalAnimName = animState.getDefaultAnimationName();
         if (config != null) {
             Identifier customAnimID = config.getAnimation(animState);
             if (customAnimID != null) {
@@ -92,37 +124,87 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             }
         }
 
-        // 7. Load and apply the animation
         Animation anim = AnimationLoader.ANIMATIONS.get(finalAnimName);
         if (anim == null) return;
 
-        applyCustomAnimation(anim, state, animState, ext);
+        // --- RESET BONES ---
+
+        // HANDS: Offset from Shoulder to Wrist
+        // Defaults to +/- 1.0f (6 - 5)
+        this.wowmod$rightHand.pitch = 0; this.wowmod$rightHand.yaw = 0; this.wowmod$rightHand.roll = 0;
+        this.wowmod$rightHand.originX = -1.0f; this.wowmod$rightHand.originY = 12.0f; this.wowmod$rightHand.originZ = 0.0f;
+        this.wowmod$rightHand.xScale = 1.0f; this.wowmod$rightHand.yScale = 1.0f; this.wowmod$rightHand.zScale = 1.0f;
+
+        this.wowmod$leftHand.pitch = 0; this.wowmod$leftHand.yaw = 0; this.wowmod$leftHand.roll = 0;
+        this.wowmod$leftHand.originX = 1.0f; this.wowmod$leftHand.originY = 12.0f; this.wowmod$leftHand.originZ = 0.0f;
+        this.wowmod$leftHand.xScale = 1.0f; this.wowmod$leftHand.yScale = 1.0f; this.wowmod$leftHand.zScale = 1.0f;
+
+        // ITEMS: Defaults to Wrist Pivot (0,0,0) relative to Hand
+        this.wowmod$rightItem.pitch = 0; this.wowmod$rightItem.yaw = 0; this.wowmod$rightItem.roll = 0;
+        this.wowmod$rightItem.originX = 0; this.wowmod$rightItem.originY = 0; this.wowmod$rightItem.originZ = 0;
+        this.wowmod$rightItem.xScale = 1.0f; this.wowmod$rightItem.yScale = 1.0f; this.wowmod$rightItem.zScale = 1.0f;
+
+        this.wowmod$leftItem.pitch = 0; this.wowmod$leftItem.yaw = 0; this.wowmod$leftItem.roll = 0;
+        this.wowmod$leftItem.originX = 0; this.wowmod$leftItem.originY = 0; this.wowmod$leftItem.originZ = 0;
+        this.wowmod$leftItem.xScale = 1.0f; this.wowmod$leftItem.yScale = 1.0f; this.wowmod$leftItem.zScale = 1.0f;
+
+        applyCustomAnimation(anim, state, animState, ext, customTime);
     }
 
-    // Override setArmAngle instead of translateToHand (which doesn't exist in 1.21 mappings)
-    // This is called by ItemInHandRenderer to position the matrices before rendering the item.
     @Override
     public void setArmAngle(PlayerEntityRenderState state, Arm arm, MatrixStack matrices) {
-        // 1. Apply the standard arm transformation (Move to shoulder, rotate arm)
         super.setArmAngle(state, arm, matrices);
 
-        // 2. Apply our custom Item Bone transformation
-        // This transformation happens "at the hand" because super.setArmAngle has already moved the matrix there.
+        ModelPart handBone = (arm == Arm.RIGHT) ? this.wowmod$rightHand : this.wowmod$leftHand;
         ModelPart itemBone = (arm == Arm.RIGHT) ? this.wowmod$rightItem : this.wowmod$leftItem;
 
+        // 1. Hand (Wrist Pivot)
+        if (handBone != null) {
+            matrices.translate(handBone.originX / 16.0F, handBone.originY / 16.0F, handBone.originZ / 16.0F);
+            if (handBone.roll != 0.0F || handBone.yaw != 0.0F || handBone.pitch != 0.0F) {
+                matrices.multiply(new Quaternionf().rotationZYX(handBone.roll, handBone.yaw, handBone.pitch));
+            }
+            if (handBone.xScale != 1.0F || handBone.yScale != 1.0F || handBone.zScale != 1.0F) {
+                matrices.scale(handBone.xScale, handBone.yScale, handBone.zScale);
+            }
+        }
+
+        // 2. Item (Stable "Cancel" Logic)
         if (itemBone != null) {
-            // Manual transformation application
 
-            // Translate (offset from parent/hand)
-            // ModelPart coordinates are usually in 16ths of a block (pixels)
-            matrices.translate(itemBone.originX / 16.0F, itemBone.originY / 16.0F, itemBone.originZ / 16.0F);
+            // --- [ADJUST THESE VALUES TO FINE TUNE] ---
 
-            // Rotate
+            // HEIGHT: Moves item UP (negative) or DOWN (positive).
+            // Start small (-1.0f or -2.0f).
+            float visualHeightOffset = -3.0f;
+
+            // SIDEWAYS: Moves item LEFT/RIGHT relative to the body.
+            // Negative moves OUT away from body. Positive moves IN.
+            float visualBodyOffset = 1f;
+
+            // ANTI-ORBIT: This cancels the Vanilla Item Renderer offset.
+            // If the item "swings" around the handle when rotating, CHANGE THIS.
+            // Try values between 10.0f and 12.0f until the spin looks centered.
+            float vanillaCancelOffset = 9f;
+
+            // ------------------------------------------
+
+            float xOffset = (arm == Arm.RIGHT) ? visualBodyOffset : -visualBodyOffset;
+
+            // STEP A: Translate to Pivot + Apply Visual Offsets
+            // Note: Changing visual offsets here technically moves the pivot point slightly.
+            matrices.translate((itemBone.originX + xOffset) / 16.0F, (itemBone.originY + visualHeightOffset) / 16.0F, itemBone.originZ / 16.0F);
+
+            // STEP B: Apply Rotation
             if (itemBone.roll != 0.0F || itemBone.yaw != 0.0F || itemBone.pitch != 0.0F) {
                 matrices.multiply(new Quaternionf().rotationZYX(itemBone.roll, itemBone.yaw, itemBone.pitch));
             }
 
-            // Scale
+            // STEP C: Return & Cancel
+            // We return from the pivot (origin), but we add the 'vanillaCancelOffset' to neutralize Vanilla's translation.
+            // Note: We do NOT subtract the visual offsets here. This leaves them applied.
+            matrices.translate(-itemBone.originX / 16.0F, (-itemBone.originY - vanillaCancelOffset) / 16.0F, -itemBone.originZ / 16.0F);
+
             if (itemBone.xScale != 1.0F || itemBone.yScale != 1.0F || itemBone.zScale != 1.0F) {
                 matrices.scale(itemBone.xScale, itemBone.yScale, itemBone.zScale);
             }
@@ -136,8 +218,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             return PlayerAnimationState.VANILLA_OVERRIDE;
         }
 
-        // --- NEW: Attack Detection ---
-        // If handSwingProgress > 0, we are in the middle of a swing
         if (state.handSwingProgress > 0.0f) {
             return PlayerAnimationState.STANDING_ATTACK;
         }
@@ -151,8 +231,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         boolean onGround = ext.wowmod$isOnGround();
         long timeSinceLand = ext.wowmod$getTimeSinceLanding();
 
-        // FIX: Allow activation if strictly on ground OR if clearly moving up while airborne
-        // Adding (!onGround && vy > 0.2f) helps catch the frame immediately after leaving the ground
         if ((onGround && vy > 0.05f) || (!onGround && vy > 0.2f)) {
             wowmod$isCustomJumpActive = true;
         }
@@ -161,8 +239,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             if (timeSinceLand >= 10) {
                 wowmod$isCustomJumpActive = false;
             }
-
-            // Check limbSwingAmplitude to determine if player is physically moving
             if (state.limbSwingAmplitude > 0.1f) {
                 if (ext.wowmod$isSprinting()) {
                     return PlayerAnimationState.LANDING_SPRINTING;
@@ -190,11 +266,13 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
     }
 
     @Unique
-    private void applyCustomAnimation(Animation anim, PlayerEntityRenderState state, PlayerAnimationState animState, RenderStateExtension ext) {
+    private void applyCustomAnimation(Animation anim, PlayerEntityRenderState state, PlayerAnimationState animState, RenderStateExtension ext, float customTime) {
         long timeSinceLand = ext.wowmod$getTimeSinceLanding();
         float timeSeconds;
 
-        if (animState == PlayerAnimationState.STANDING_ATTACK) {
+        if (customTime >= 0) {
+            timeSeconds = customTime;
+        } else if (animState == PlayerAnimationState.STANDING_ATTACK) {
             timeSeconds = state.handSwingProgress * anim.animation_length;
         } else if (animState == PlayerAnimationState.LANDING_IDLE ||
                 animState == PlayerAnimationState.LANDING_WALKING ||
@@ -206,60 +284,45 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
 
         boolean isSneaking = (animState == PlayerAnimationState.SNEAKING);
 
-        // --- 0. Animate Controller Bone ---
         BoneModifier.applyBone(this.wowmod$controller, anim.bones.get("controller"), timeSeconds, 0, 0, 0);
 
-        // Calculate Controller Rotation Matrix
         Quaternionf controllerRot = new Quaternionf().rotationZYX(
                 this.wowmod$controller.roll,
                 this.wowmod$controller.yaw,
                 this.wowmod$controller.pitch
         );
 
-        // --- 1. Apply Body Animation ---
         if (!isSneaking) {
             BoneModifier.applyBone(this.body, anim.bones.get("body"), timeSeconds, 0, 0, 0);
-
-            // Add rotation (simple addition for Euler angles)
             this.body.pitch += this.wowmod$controller.pitch;
             this.body.yaw += this.wowmod$controller.yaw;
             this.body.roll += this.wowmod$controller.roll;
 
-            // Apply Waist Pivot Logic (Leaning)
             float bodyPitch = this.body.pitch;
             float pivotY = 12.0f;
             float dY = (float) (pivotY - pivotY * Math.cos(bodyPitch));
             float dZ = (float) -(pivotY * Math.sin(bodyPitch));
 
-            // Get local position and add pivot offset
             Vector3f bodyPos = new Vector3f(this.body.originX, this.body.originY + dY, this.body.originZ + dZ);
-
-            // Orbit Body around Controller
             bodyPos.rotate(controllerRot);
 
-            // Set Final Position
             this.body.originX = this.wowmod$controller.originX + bodyPos.x;
             this.body.originY = this.wowmod$controller.originY + bodyPos.y;
             this.body.originZ = this.wowmod$controller.originZ + bodyPos.z;
         }
 
-        // Calculate Body Rotation Matrix (for children: Head/Arms)
         Quaternionf bodyRot = new Quaternionf().rotationZYX(
                 this.body.roll,
                 this.body.yaw,
                 this.body.pitch
         );
 
-        // --- 2. Apply Head Animation ---
         if (!isSneaking) {
             BoneModifier.applyBone(this.head, anim.bones.get("head"), timeSeconds, 0, 0, 0);
-
-            // Add rotation
             this.head.pitch += this.body.pitch;
             this.head.yaw += this.body.yaw;
             this.head.roll += this.body.roll;
 
-            // Orbit Head around Body
             Vector3f headPos = new Vector3f(this.head.originX, this.head.originY, this.head.originZ);
             headPos.rotate(bodyRot);
 
@@ -268,7 +331,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             this.head.originZ = this.body.originZ + headPos.z;
         }
 
-        // --- 3. Apply Leg Animations (Independent of Body, Parented to Controller) ---
         if (!isSneaking) {
             BoneModifier.applyBone(this.rightLeg, anim.bones.get("rightLeg"), timeSeconds, -1.9f, 12.0f, 0);
             BoneModifier.applyBone(this.leftLeg, anim.bones.get("leftLeg"), timeSeconds, 1.9f, 12.0f, 0);
@@ -281,7 +343,6 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             this.leftLeg.yaw += this.wowmod$controller.yaw;
             this.leftLeg.roll += this.wowmod$controller.roll;
 
-            // Orbit Legs around Controller
             Vector3f rightLegPos = new Vector3f(this.rightLeg.originX, this.rightLeg.originY, this.rightLeg.originZ);
             Vector3f leftLegPos = new Vector3f(this.leftLeg.originX, this.leftLeg.originY, this.leftLeg.originZ);
 
@@ -297,11 +358,11 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             this.leftLeg.originZ = this.wowmod$controller.originZ + leftLegPos.z;
         }
 
-        // --- 4. Animate Arms (Parented to Body) ---
-        boolean isAttacking = (animState == PlayerAnimationState.STANDING_ATTACK);
+        boolean isAttacking = (animState == PlayerAnimationState.STANDING_ATTACK ||
+                animState == PlayerAnimationState.ATTACK_STRIKE ||
+                animState == PlayerAnimationState.ATTACK_RETURN);
         boolean shouldAnimateArms = isAttacking || (state.handSwingProgress == 0.0f && !state.isUsingItem);
 
-        // Save vanilla rotations
         float vanillaRightPitch = this.rightArm.pitch;
         float vanillaRightYaw = this.rightArm.yaw;
         float vanillaRightRoll = this.rightArm.roll;
@@ -310,14 +371,11 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
         float vanillaLeftYaw = this.leftArm.yaw;
         float vanillaLeftRoll = this.leftArm.roll;
 
-        // RIGHT ARM
         Animation.Bone rightArmBone = anim.bones.get("rightArm");
         if (shouldAnimateArms) {
-            // Apply Custom (Offset -5, 2, 0 passed as default)
             if (rightArmBone != null) {
                 BoneModifier.applyBone(this.rightArm, rightArmBone, timeSeconds, -5.0f, 2.0f, 0.0f);
             } else {
-                // Reset to default if bone missing but animating
                 this.rightArm.pitch = 0; this.rightArm.yaw = 0; this.rightArm.roll = 0;
                 this.rightArm.originX = -5.0f; this.rightArm.originY = 2.0f; this.rightArm.originZ = 0.0f;
             }
@@ -325,26 +383,20 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             this.rightArm.yaw += this.body.yaw;
             this.rightArm.roll += this.body.roll;
         } else {
-            // Restore Vanilla + Parent Rotation
             this.rightArm.pitch = vanillaRightPitch + this.body.pitch;
             this.rightArm.yaw = vanillaRightYaw + this.body.yaw;
             this.rightArm.roll = vanillaRightRoll + this.body.roll;
-            // Reset position to default offset so it can be rotated correctly
             this.rightArm.originX = -5.0f; this.rightArm.originY = 2.0f; this.rightArm.originZ = 0.0f;
         }
 
-        // Orbit Right Arm around Body
         Vector3f rightArmPos = new Vector3f(this.rightArm.originX, this.rightArm.originY, this.rightArm.originZ);
         rightArmPos.rotate(bodyRot);
         this.rightArm.originX = this.body.originX + rightArmPos.x;
         this.rightArm.originY = this.body.originY + rightArmPos.y;
         this.rightArm.originZ = this.body.originZ + rightArmPos.z;
 
-
-        // LEFT ARM
         Animation.Bone leftArmBone = anim.bones.get("leftArm");
         if (shouldAnimateArms) {
-            // Apply Custom (Offset 5, 2, 0 passed as default)
             if (leftArmBone != null) {
                 BoneModifier.applyBone(this.leftArm, leftArmBone, timeSeconds, 5.0f, 2.0f, 0.0f);
             } else {
@@ -361,16 +413,19 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             this.leftArm.originX = 5.0f; this.leftArm.originY = 2.0f; this.leftArm.originZ = 0.0f;
         }
 
-        // Orbit Left Arm around Body
         Vector3f leftArmPos = new Vector3f(this.leftArm.originX, this.leftArm.originY, this.leftArm.originZ);
         leftArmPos.rotate(bodyRot);
         this.leftArm.originX = this.body.originX + leftArmPos.x;
         this.leftArm.originY = this.body.originY + leftArmPos.y;
         this.leftArm.originZ = this.body.originZ + leftArmPos.z;
 
+        // --- HANDS & ITEMS (Wrist Pivots) ---
+        // 1. Move Hand to Wrist (Pivot Point)
+        BoneModifier.applyBone(this.wowmod$rightHand, anim.bones.get("rightHand"), timeSeconds, -1f, 12.0f, 0);
+        BoneModifier.applyBone(this.wowmod$leftHand, anim.bones.get("leftHand"), timeSeconds, 1f, 12.0f, 0);
 
-        // --- 5. Animate Items (Parented to Hand) ---
-        BoneModifier.applyBone(this.wowmod$rightItem, anim.bones.get("rightItem"), timeSeconds, 0, 0, 0);
-        BoneModifier.applyBone(this.wowmod$leftItem, anim.bones.get("leftItem"), timeSeconds, 0, 0, 0);
+        // 2. Move Item Bones
+        BoneModifier.applyBone(this.wowmod$rightItem, anim.bones.get("rightItem"), timeSeconds, 0, 0.0f, 0);
+        BoneModifier.applyBone(this.wowmod$leftItem, anim.bones.get("leftItem"), timeSeconds, 0, 0.0f, 0);
     }
 }

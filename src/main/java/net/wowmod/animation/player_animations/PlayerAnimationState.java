@@ -12,10 +12,13 @@ public enum PlayerAnimationState {
     LANDING_WALKING("jumping_default_landing_walking"),
     LANDING_SPRINTING("jumping_default_landing_sprinting"),
     FALLING("jumping_default_ascending-falling"),
-    STANDING_ATTACK("attack_standing_default");
 
-    //SPRINTING_ATTACK("sprinting_attack_default"),
-    //JUMPING_ATTACK("jumping_attack_default);
+    // Fallback
+    STANDING_ATTACK("attack_standing_default"),
+
+    // Split Phases
+    ATTACK_STRIKE("attack_strike"),
+    ATTACK_RETURN("attack_return");
 
     private final String defaultAnimationName;
 

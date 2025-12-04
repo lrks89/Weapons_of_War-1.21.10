@@ -4,6 +4,6 @@
     "walking": "wowmod:walking_default",
     "sprinting": "wowmod:sprinting_default",
     "jumping": "wowmod:jumping_default",
-    "standing_attack": "wowmod:attack_one_hand_slash_horizontal_left"
+    "standing_attack": "wowmod:hand_test"
   }
 }

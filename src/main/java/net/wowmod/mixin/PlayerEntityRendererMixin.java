@@ -34,8 +34,13 @@ public class PlayerEntityRendererMixin {
                 boolean inCollisionFluid = player.isInLava() || player.isSubmergedInWater() || player.isTouchingWater();
                 extendedState.wowmod$setInWater(inCollisionFluid);
 
-                // --- FIX: Pass Main Hand Item ---
+                // --- Item Stack ---
                 extendedState.wowmod$setMainHandStack(player.getMainHandStack());
+
+                // --- NEW: Capture Swing Duration via Accessor ---
+                // We cast to LivingEntityAccessor to access the protected method
+                int duration = ((LivingEntityAccessor) player).wowmod$getHandSwingDuration();
+                extendedState.wowmod$setHandSwingDuration(duration);
 
                 if (player instanceof IAnimatedPlayer animatedPlayer) {
                     long diff = player.getEntityWorld().getTime() - animatedPlayer.wowmod$getLastLandTime();
