@@ -1,8 +1,5 @@
 package net.wowmod.mixin;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
@@ -17,6 +14,7 @@ import net.wowmod.animation.player_animations.AnimationLoader;
 import net.wowmod.animation.player_animations.BoneModifier;
 import net.wowmod.animation.player_animations.player_weapons.WeaponAnimationConfig;
 import net.wowmod.animation.player_animations.player_weapons.WeaponAnimationLoader;
+import net.wowmod.util.PlayerModelUtils;
 import net.wowmod.util.RenderStateExtension;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -169,45 +167,9 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             }
         }
 
-        // 2. Item (Stable "Cancel" Logic)
+        // 2. Item (Delegated to Helper)
         if (itemBone != null) {
-
-            // --- [ADJUST THESE VALUES TO FINE TUNE] ---
-
-            // HEIGHT: Moves item UP (negative) or DOWN (positive).
-            // Start small (-1.0f or -2.0f).
-            float visualHeightOffset = -3.0f;
-
-            // SIDEWAYS: Moves item LEFT/RIGHT relative to the body.
-            // Negative moves OUT away from body. Positive moves IN.
-            float visualBodyOffset = 1f;
-
-            // ANTI-ORBIT: This cancels the Vanilla Item Renderer offset.
-            // If the item "swings" around the handle when rotating, CHANGE THIS.
-            // Try values between 10.0f and 12.0f until the spin looks centered.
-            float vanillaCancelOffset = 9f;
-
-            // ------------------------------------------
-
-            float xOffset = (arm == Arm.RIGHT) ? visualBodyOffset : -visualBodyOffset;
-
-            // STEP A: Translate to Pivot + Apply Visual Offsets
-            // Note: Changing visual offsets here technically moves the pivot point slightly.
-            matrices.translate((itemBone.originX + xOffset) / 16.0F, (itemBone.originY + visualHeightOffset) / 16.0F, itemBone.originZ / 16.0F);
-
-            // STEP B: Apply Rotation
-            if (itemBone.roll != 0.0F || itemBone.yaw != 0.0F || itemBone.pitch != 0.0F) {
-                matrices.multiply(new Quaternionf().rotationZYX(itemBone.roll, itemBone.yaw, itemBone.pitch));
-            }
-
-            // STEP C: Return & Cancel
-            // We return from the pivot (origin), but we add the 'vanillaCancelOffset' to neutralize Vanilla's translation.
-            // Note: We do NOT subtract the visual offsets here. This leaves them applied.
-            matrices.translate(-itemBone.originX / 16.0F, (-itemBone.originY - vanillaCancelOffset) / 16.0F, -itemBone.originZ / 16.0F);
-
-            if (itemBone.xScale != 1.0F || itemBone.yScale != 1.0F || itemBone.zScale != 1.0F) {
-                matrices.scale(itemBone.xScale, itemBone.yScale, itemBone.zScale);
-            }
+            PlayerModelUtils.applyItemTransform(arm, matrices, itemBone);
         }
     }
 
