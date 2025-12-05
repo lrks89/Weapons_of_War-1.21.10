@@ -2,6 +2,7 @@
 	"format_version": "1.8.0",
 	"animations": {
 		"walking_default": {
+			"loop": true,
 			"animation_length": 1,
 			"bones": {
 				"leftArm": {
@@ -70,30 +71,6 @@
 						}
 					}
 				},
-				"leftItem": {
-					"rotation": {
-						"0.0": {
-							"vector": [0, 0, 0]
-						},
-						"0.5": {
-							"vector": [0, 0, 0]
-						},
-						"1.0": {
-							"vector": [0, 0, 0]
-						}
-					},
-					"position": {
-						"0.0": {
-							"vector": [0, 0, 0]
-						},
-						"0.5": {
-							"vector": [0, 0, 0]
-						},
-						"1.0": {
-							"vector": [0, 0, 0]
-						}
-					}
-				},
 				"rightArm": {
 					"rotation": {
 						"0.0": {
@@ -107,30 +84,6 @@
 						},
 						"0.75": {
 							"vector": [45, 0, 0]
-						},
-						"1.0": {
-							"vector": [0, 0, 0]
-						}
-					},
-					"position": {
-						"0.0": {
-							"vector": [0, 0, 0]
-						},
-						"0.5": {
-							"vector": [0, 0, 0]
-						},
-						"1.0": {
-							"vector": [0, 0, 0]
-						}
-					}
-				},
-				"rightItem": {
-					"rotation": {
-						"0.0": {
-							"vector": [0, 0, 0]
-						},
-						"0.5": {
-							"vector": [0, 0, 0]
 						},
 						"1.0": {
 							"vector": [0, 0, 0]
@@ -214,30 +167,6 @@
 						},
 						"0.75": {
 							"vector": [0, 0, 0.5]
-						},
-						"1.0": {
-							"vector": [0, 0, 0]
-						}
-					}
-				},
-				"controller": {
-					"rotation": {
-						"0.0": {
-							"vector": [0, 0, 0]
-						},
-						"0.5": {
-							"vector": [0, 0, 0]
-						},
-						"1.0": {
-							"vector": [0, 0, 0]
-						}
-					},
-					"position": {
-						"0.0": {
-							"vector": [0, 0, 0]
-						},
-						"0.5": {
-							"vector": [0, 0, 0]
 						},
 						"1.0": {
 							"vector": [0, 0, 0]
