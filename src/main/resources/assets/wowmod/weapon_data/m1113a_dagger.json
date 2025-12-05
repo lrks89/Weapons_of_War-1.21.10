@@ -3,7 +3,7 @@
     "idle": "wowmod:idle_default",
     "walking": "wowmod:walking_default",
     "sprinting": "wowmod:sprinting_ninja",
-    "jumping": "wowmod:jumping_default",
+    "jumping": "wowmod:jumping_ninja",
     "standing_attack": "wowmod:hand_test"
   }
 }

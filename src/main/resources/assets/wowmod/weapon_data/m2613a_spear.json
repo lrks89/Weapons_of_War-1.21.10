@@ -2,8 +2,8 @@
   "animations": {
     "idle": "wowmod:idle_default",
     "walking": "wowmod:walking_default",
-    "sprinting": "wowmod:sprinting_pole_two_hand",
-    "jumping": "wowmod:jumping_pole",
+    "sprinting": "wowmod:sprinting_pole_one_hand",
+    "jumping": "wowmod:jumping_pole_one_hand",
     "standing_attack": "wowmod:hand_test"
   }
 }
