@@ -13,18 +13,14 @@ public class WeaponAnimationConfig {
 
         // 1. Macro Match (Jumping / Landing)
         if (state == PlayerAnimationState.JUMPING ||
-                state == PlayerAnimationState.LANDING_IDLE ||
-                state == PlayerAnimationState.LANDING_WALKING ||
-                state == PlayerAnimationState.LANDING_SPRINTING) {
+                state == PlayerAnimationState.LANDING) {
 
             String jumpingBase = animations.get("jumping");
 
             if (jumpingBase != null && !jumpingBase.isEmpty()) {
                 String suffix = switch (state) {
                     case JUMPING -> "_ascending-falling";
-                    case LANDING_IDLE -> "_landing_idle";
-                    case LANDING_WALKING -> "_jumping_landing_walking";
-                    case LANDING_SPRINTING -> "_jumping_landing_sprinting";
+                    case LANDING -> "_landing";
                     default -> "";
                 };
                 return Identifier.of(jumpingBase + suffix);

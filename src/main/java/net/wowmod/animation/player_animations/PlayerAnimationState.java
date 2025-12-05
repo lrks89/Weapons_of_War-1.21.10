@@ -8,9 +8,7 @@ public enum PlayerAnimationState {
     WALKING("walking_default"),
     SPRINTING("sprinting_default"),
     JUMPING("jumping_default_ascending-falling"),
-    LANDING_IDLE("jumping_default_landing_idle"),
-    LANDING_WALKING("jumping_default_landing_walking"),
-    LANDING_SPRINTING("jumping_default_landing_sprinting"),
+    LANDING("jumping_default_landing_idle"),
     FALLING("jumping_default_ascending-falling"),
 
     // Fallback
