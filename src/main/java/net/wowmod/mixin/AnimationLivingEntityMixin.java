@@ -13,6 +13,11 @@ public abstract class AnimationLivingEntityMixin {
     @Inject(method = "getHandSwingDuration", at = @At("HEAD"), cancellable = true)
     private void scaleSwingSpeed(CallbackInfoReturnable<Integer> cir) {
         LivingEntity entity = (LivingEntity) (Object) this;
+
+        if (entity.getAttributeInstance(EntityAttributes.ATTACK_SPEED) == null) {
+            return;
+        }
+
         double attackSpeed = entity.getAttributeValue(EntityAttributes.ATTACK_SPEED);
         double referenceSpeed = 4.0;
         double baseDuration = 3.0;
