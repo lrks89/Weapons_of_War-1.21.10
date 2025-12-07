@@ -27,6 +27,8 @@ public class PlayerEntityRenderStateMixin implements RenderStateExtension {
 
     // --- FIX: Item Stack Storage ---
     @Unique private ItemStack wowmod$mainHandStack = ItemStack.EMPTY;
+    // --- NEW: Off Hand Storage ---
+    @Unique private ItemStack wowmod$offHandStack = ItemStack.EMPTY;
 
     // --- NEW: Swing Duration ---
     @Unique private int wowmod$handSwingDuration;
@@ -63,6 +65,10 @@ public class PlayerEntityRenderStateMixin implements RenderStateExtension {
     // --- FIX: Item Stack Accessors ---
     @Override public ItemStack wowmod$getMainHandStack() { return this.wowmod$mainHandStack; }
     @Override public void wowmod$setMainHandStack(ItemStack stack) { this.wowmod$mainHandStack = stack; }
+
+    // --- NEW: Off Hand Accessors ---
+    @Override public ItemStack wowmod$getOffHandStack() { return this.wowmod$offHandStack; }
+    @Override public void wowmod$setOffHandStack(ItemStack stack) { this.wowmod$offHandStack = stack; }
 
     // --- NEW: Swing Duration Accessors ---
     @Override public int wowmod$getHandSwingDuration() { return this.wowmod$handSwingDuration; }

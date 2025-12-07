@@ -6,6 +6,7 @@ import net.minecraft.client.render.entity.model.PlayerEntityModel;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.ShieldItem;
 import net.minecraft.util.Arm;
 import net.minecraft.util.Identifier;
 import net.wowmod.animation.player_animations.PlayerAnimationState;
@@ -30,7 +31,8 @@ import org.joml.Vector3f;
 @Mixin(PlayerEntityModel.class)
 public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEntityRenderState> {
 
-    @Unique private static boolean wowmod$isCustomJumpActive = false;
+    // Removed static to prevent state leaking between players/instances
+    @Unique private boolean wowmod$isCustomJumpActive = false;
 
     // Virtual bones
     @Unique public ModelPart wowmod$controller;
@@ -99,9 +101,17 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
             config = WeaponAnimationLoader.WEAPON_ANIMATION_CONFIGS.get(itemID);
         }
 
+        // --- NEW: Context Checks ---
+        ItemStack offHandStack = ext.wowmod$getOffHandStack();
+        boolean isShieldOffhand = offHandStack != null && (offHandStack.getItem() instanceof ShieldItem);
+
         float customTime = -1.0f;
+
+        // Attack Logic: Check for override or fallback to default attack
         if (animState == PlayerAnimationState.STANDING_ATTACK && config != null) {
-            Identifier strikeID = config.getAnimation(PlayerAnimationState.ATTACK_STRIKE);
+            // Check specific attack phase override first (passing the shield state)
+            Identifier strikeID = config.getAnimation(PlayerAnimationState.ATTACK_STRIKE, isShieldOffhand);
+
             if (strikeID != null) {
                 String strikeName = strikeID.getPath().replace("player_animations/", "");
                 Animation strikeAnim = AnimationLoader.ANIMATIONS.get(strikeName);
@@ -115,7 +125,8 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
                         animState = PlayerAnimationState.ATTACK_STRIKE;
                         customTime = currentTick / 20.0f;
                     } else {
-                        Identifier returnID = config.getAnimation(PlayerAnimationState.ATTACK_RETURN);
+                        // Pass shield state here as well for return animation
+                        Identifier returnID = config.getAnimation(PlayerAnimationState.ATTACK_RETURN, isShieldOffhand);
                         if (returnID != null) {
                             animState = PlayerAnimationState.ATTACK_RETURN;
                             float returnProgress = (currentTick - strikeLengthTicks) / (totalDurationTicks - strikeLengthTicks);
@@ -131,7 +142,8 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
 
         String finalAnimName = animState.getDefaultAnimationName();
         if (config != null) {
-            Identifier customAnimID = config.getAnimation(animState);
+            // Pass shield state to main animation lookup (Walking, Idle, Sprinting, Falling, Jumping)
+            Identifier customAnimID = config.getAnimation(animState, isShieldOffhand);
             if (customAnimID != null) {
                 finalAnimName = customAnimID.getPath().replace("player_animations/", "");
             }

@@ -36,6 +36,8 @@ public class PlayerEntityRendererMixin {
 
                 // --- Item Stack ---
                 extendedState.wowmod$setMainHandStack(player.getMainHandStack());
+                // --- NEW: Capture Off Hand Item ---
+                extendedState.wowmod$setOffHandStack(player.getOffHandStack());
 
                 // --- NEW: Capture Swing Duration via Accessor ---
                 // We cast to LivingEntityAccessor to access the protected method

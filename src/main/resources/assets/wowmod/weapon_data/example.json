@@ -5,5 +5,17 @@
     "sprinting": "wowmod:sprinting_default",
     "jumping": "wowmod:jumping_default",
     "standing_attack": "wowmod:attack_standing_default"
-  }
+  },
+  "overrides": [
+    {
+      "condition": "shield_offhand",
+      "animations": {
+        "idle": "wowmod:idle_default",
+        "walking": "wowmod:walking_default",
+        "sprinting": "wowmod:sprinting_default",
+        "jumping": "wowmod:jumping_default",
+        "standing_attack": "wowmod:attack_standing_default"
+      }
+    }
+  ]
 }
