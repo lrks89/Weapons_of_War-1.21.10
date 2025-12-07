@@ -3,6 +3,7 @@ package net.wowmod.mixin;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.consume.UseAction;
+import net.wowmod.effect.ModEffects;
 import net.wowmod.item.custom.ParryShieldItem;
 import net.wowmod.item.custom.ParryWeaponItem;
 import net.wowmod.logic.ParryLogic;
@@ -24,14 +25,24 @@ public abstract class BlockingLivingEntityMixin implements IParryStunnedEntity {
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void wowmod_applyStunAndDisableTick(CallbackInfo ci) {
+        LivingEntity self = (LivingEntity)(Object)this;
+
+        // 1. Water Cleansing Logic
+        if (self.isTouchingWater() || self.isTouchingWaterOrRain()) {
+            if (self.hasStatusEffect(ModEffects.SLIMED)) {
+                self.removeStatusEffect(ModEffects.SLIMED);
+            }
+        }
+
+        // 2. Stun Logic
         if (this.wowmod_parriedStunTicks > 0) {
             this.wowmod_parriedStunTicks--;
             // Delegate effect logic to ParryLogic
-            ParryLogic.tickStunnedEntity((LivingEntity)(Object)this, this.wowmod_parriedStunTicks);
+            ParryLogic.tickStunnedEntity(self, this.wowmod_parriedStunTicks);
         }
 
-        // Keep simple boolean check here or move if it gets complex
-        if ((Object) this instanceof PlayerEntity player) {
+        // 3. Sprint Cancel Logic
+        if (self instanceof PlayerEntity player) {
             if (player.isBlocking() && player.isSprinting()) {
                 player.setSprinting(false);
             }

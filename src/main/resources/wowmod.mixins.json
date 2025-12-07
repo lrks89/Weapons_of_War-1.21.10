@@ -15,7 +15,10 @@
     "HighJumpClientPlayerMixin",
     "HighJumpHudMixin",
     "HighJumpLivingEntityMixin",
-    "LongJumpInputMixin"
+    "ItemAccessor",
+    "LongJumpInputMixin",
+    "PotionBrewingMixin",
+    "SlimeEntityMixin"
   ],
   "injectors": {
     "defaultRequire": 1

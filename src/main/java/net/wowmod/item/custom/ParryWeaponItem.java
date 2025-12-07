@@ -12,6 +12,7 @@ import net.minecraft.item.consume.UseAction;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
+import net.wowmod.effect.ModEffects;
 import net.wowmod.util.IParryPlayer;
 
 public class ParryWeaponItem extends Item implements IParryItem {
@@ -35,8 +36,6 @@ public class ParryWeaponItem extends Item implements IParryItem {
     public float getDamageReduction() {
         return this.damageReduction;
     }
-
-    // Removed appendTooltip method. We will use ItemTooltipCallback in the Client Initializer instead.
 
     @Override
     public UseAction getUseAction(ItemStack stack) {
@@ -63,6 +62,11 @@ public class ParryWeaponItem extends Item implements IParryItem {
 
     @Override
     public ActionResult use(World world, PlayerEntity player, Hand hand) {
+        // 1. Check for Slimed Effect
+        if (player.hasStatusEffect(ModEffects.SLIMED)) {
+            return ActionResult.FAIL;
+        }
+
         if (hand == Hand.MAIN_HAND) {
             ItemStack offhandStack = player.getStackInHand(Hand.OFF_HAND);
             Item offhandItem = offhandStack.getItem();

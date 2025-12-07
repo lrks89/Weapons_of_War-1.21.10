@@ -8,6 +8,7 @@ import net.minecraft.item.consume.UseAction;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
+import net.wowmod.effect.ModEffects;
 import net.wowmod.util.IParryPlayer;
 
 public class ParryShieldItem extends ShieldItem implements IParryItem {
@@ -28,8 +29,6 @@ public class ParryShieldItem extends ShieldItem implements IParryItem {
         return 1.0f; // 100% block
     }
 
-    // Removed appendTooltip override. Using Client ItemTooltipCallback instead.
-
     @Override
     public UseAction getUseAction(ItemStack stack) {
         return UseAction.BLOCK;
@@ -42,6 +41,11 @@ public class ParryShieldItem extends ShieldItem implements IParryItem {
 
     @Override
     public ActionResult use(World world, PlayerEntity player, Hand hand) {
+        // 1. Check for Slimed Effect
+        if (player.hasStatusEffect(ModEffects.SLIMED)) {
+            return ActionResult.FAIL;
+        }
+
         ItemStack itemStack = player.getStackInHand(hand);
 
         // Check for parry spam (de-bounce)
@@ -54,7 +58,6 @@ public class ParryShieldItem extends ShieldItem implements IParryItem {
 
         if (!world.isClient()) {
             // Set the parry time on the player
-            // This is the same logic WeaponItem uses
             ((IParryPlayer) player).wowmod_setLastParryTime(world.getTime());
 
             // Apply the cooldown
