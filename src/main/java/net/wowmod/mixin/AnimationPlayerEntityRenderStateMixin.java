@@ -33,6 +33,9 @@ public class AnimationPlayerEntityRenderStateMixin implements RenderStateExtensi
     // --- NEW: Swing Duration ---
     @Unique private int wowmod$handSwingDuration;
 
+    // --- NEW: Blocking State ---
+    @Unique private boolean wowmod$isBlocking;
+
     // Implementation of RenderStateExtension interface
 
     @Override public boolean wowmod$isSprinting() { return this.wowmod$sprinting; }
@@ -73,4 +76,8 @@ public class AnimationPlayerEntityRenderStateMixin implements RenderStateExtensi
     // --- NEW: Swing Duration Accessors ---
     @Override public int wowmod$getHandSwingDuration() { return this.wowmod$handSwingDuration; }
     @Override public void wowmod$setHandSwingDuration(int ticks) { this.wowmod$handSwingDuration = ticks; }
+
+    // --- NEW: Blocking State Accessors ---
+    @Override public boolean wowmod$isBlocking() { return this.wowmod$isBlocking; }
+    @Override public void wowmod$setBlocking(boolean blocking) { this.wowmod$isBlocking = blocking; }
 }

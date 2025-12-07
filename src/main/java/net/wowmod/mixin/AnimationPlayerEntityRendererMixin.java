@@ -44,6 +44,9 @@ public class AnimationPlayerEntityRendererMixin {
                 int duration = ((AnimationLivingEntityAccessor) player).wowmod$getHandSwingDuration();
                 extendedState.wowmod$setHandSwingDuration(duration);
 
+                // --- NEW: Capture Blocking State ---
+                extendedState.wowmod$setBlocking(player.isBlocking());
+
                 if (player instanceof IAnimatedPlayer animatedPlayer) {
                     long diff = player.getEntityWorld().getTime() - animatedPlayer.wowmod$getLastLandTime();
                     extendedState.wowmod$setTimeSinceLanding(diff);

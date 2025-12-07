@@ -78,7 +78,24 @@ public class WeaponAnimationConfig {
             }
         }
 
-        // 3. Standard Lookup (Idle, Walking, Sprinting)
+        // 3. Blocking Fallback Logic (MACRO)
+        if (state == PlayerAnimationState.BLOCKING_IDLE || state == PlayerAnimationState.BLOCKING_WALKING) {
+            // A. Try specific key first (e.g. "blocking_idle")
+            String specificKey = state.toString().toLowerCase();
+            if (map.containsKey(specificKey)) {
+                return Identifier.of(map.get(specificKey));
+            }
+
+            // B. Fallback to generic "blocking" key + Automatic Suffix
+            if (map.containsKey("blocking")) {
+                String base = map.get("blocking");
+                // Automatically append _idle or _walking
+                String suffix = (state == PlayerAnimationState.BLOCKING_IDLE) ? "_idle" : "_walking";
+                return Identifier.of(base + suffix);
+            }
+        }
+
+        // 4. Standard Lookup (Idle, Walking, Sprinting)
         String key = state.toString().toLowerCase();
 
         // Specific handling for attack_standing to map to "attack" in JSON if needed

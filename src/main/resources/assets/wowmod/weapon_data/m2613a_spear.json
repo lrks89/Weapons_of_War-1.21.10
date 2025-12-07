@@ -14,6 +14,7 @@
         "walking": "wowmod:walking_default",
         "sprinting": "wowmod:sprinting_pole_one_hand",
         "jumping": "wowmod:jumping_pole_one_hand",
+        "blocking": "wowmod:blocking_shield",
         "standing_attack": "wowmod:hand_test"
       }
     }

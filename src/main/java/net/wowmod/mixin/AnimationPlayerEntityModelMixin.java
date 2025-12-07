@@ -84,12 +84,7 @@ public abstract class AnimationPlayerEntityModelMixin extends BipedEntityModel<P
         RenderStateExtension ext = (state instanceof RenderStateExtension e) ? e : null;
         if (ext == null) return;
 
-        PlayerAnimationState animState = determineAnimationState(state, ext);
-
-        if (animState == PlayerAnimationState.VANILLA_OVERRIDE) {
-            return;
-        }
-
+        // 1. Resolve Config EARLY so we can check if animations exist
         ItemStack mainHandStack = ext.wowmod$getMainHandStack();
         Identifier itemID = null;
         if (mainHandStack != null && !mainHandStack.isEmpty()) {
@@ -101,9 +96,15 @@ public abstract class AnimationPlayerEntityModelMixin extends BipedEntityModel<P
             config = WeaponAnimationLoader.WEAPON_ANIMATION_CONFIGS.get(itemID);
         }
 
-        // --- NEW: Context Checks ---
         ItemStack offHandStack = ext.wowmod$getOffHandStack();
         boolean isShieldOffhand = offHandStack != null && (offHandStack.getItem() instanceof ShieldItem);
+
+        // 2. Pass Config to State Determination
+        PlayerAnimationState animState = determineAnimationState(state, ext, config, isShieldOffhand);
+
+        if (animState == PlayerAnimationState.VANILLA_OVERRIDE) {
+            return;
+        }
 
         float customTime = -1.0f;
 
@@ -142,7 +143,7 @@ public abstract class AnimationPlayerEntityModelMixin extends BipedEntityModel<P
 
         String finalAnimName = animState.getDefaultAnimationName();
         if (config != null) {
-            // Pass shield state to main animation lookup (Walking, Idle, Sprinting, Falling, Jumping)
+            // Pass shield state to main animation lookup (Walking, Idle, Sprinting, Falling, Jumping, Blocking)
             Identifier customAnimID = config.getAnimation(animState, isShieldOffhand);
             if (customAnimID != null) {
                 finalAnimName = customAnimID.getPath().replace("player_animations/", "");
@@ -152,7 +153,12 @@ public abstract class AnimationPlayerEntityModelMixin extends BipedEntityModel<P
         Animation anim = AnimationLoader.ANIMATIONS.get(finalAnimName);
         if (anim == null) return;
 
-        // --- RESET BONES ---
+        // --- CAPTURE VANILLA LOOK DIRECTION ---
+        // Vanilla setAngles sets head pitch/yaw based on camera before we run.
+        float vanillaHeadPitch = this.head.pitch;
+        float vanillaHeadYaw = this.head.yaw;
+
+        // --- RESET CUSTOM BONES ---
         resetBoneToDefault(this.wowmod$controller, 0.0f, 0.0f, 0.0f);
         resetBoneToDefault(this.wowmod$rightHand, -1.0f, 12.0f, 0.0f);
         resetBoneToDefault(this.wowmod$leftHand, 1.0f, 12.0f, 0.0f);
@@ -165,7 +171,38 @@ public abstract class AnimationPlayerEntityModelMixin extends BipedEntityModel<P
         resetBoneToDefault(this.wowmod$rightHip, RIGHT_LEG_DEFAULT_X, LEG_DEFAULT_Y, 0.0f);
         resetBoneToDefault(this.wowmod$leftHip, LEFT_LEG_DEFAULT_X, LEG_DEFAULT_Y, 0.0f);
 
+        // --- RESET VANILLA BONES (Prevent Mixing) ---
+        // Fix: Reset head to avoid double rotation application
+        resetBoneToDefault(this.head, 0.0f, 0.0f, 0.0f);
+
+        boolean isSneaking = (animState == PlayerAnimationState.SNEAKING);
+
+        if (!isSneaking) {
+            resetBoneToDefault(this.body, 0.0f, 0.0f, 0.0f);
+            resetBoneToDefault(this.rightLeg, RIGHT_LEG_DEFAULT_X, LEG_DEFAULT_Y, 0.0f);
+            resetBoneToDefault(this.leftLeg, LEFT_LEG_DEFAULT_X, LEG_DEFAULT_Y, 0.0f);
+        }
+
+        // We reset arms always to prevent vanilla swinging mixing with custom actions
+        resetBoneToDefault(this.rightArm, RIGHT_ARM_DEFAULT_X, ARM_DEFAULT_Y, 0.0f);
+        resetBoneToDefault(this.leftArm, LEFT_ARM_DEFAULT_X, ARM_DEFAULT_Y, 0.0f);
+
         applyCustomAnimation(anim, state, animState, ext, customTime);
+
+        // --- RE-APPLY VANILLA LOOK ---
+        // Add the vanilla look angles on top of whatever the custom animation did to the head.
+        // This allows the head to animate (e.g., bobbing) while still tracking the camera.
+        this.head.pitch += vanillaHeadPitch;
+        this.head.yaw += vanillaHeadYaw;
+
+        // --- RE-APPLY VANILLA LOOK TO ARMS (Blocking Check) ---
+        // If blocking, we want the arms to also somewhat track the camera pitch (look up/down).
+        // Vanilla does this by adding head pitch to arm pitch.
+        if (animState == PlayerAnimationState.BLOCKING_IDLE || animState == PlayerAnimationState.BLOCKING_WALKING) {
+            // Apply a portion of the head pitch to the arms so the shield/weapon points up/down
+            this.rightArm.pitch += vanillaHeadPitch * 0.5f;
+            this.leftArm.pitch += vanillaHeadPitch * 0.5f;
+        }
     }
 
     @Unique
@@ -197,7 +234,7 @@ public abstract class AnimationPlayerEntityModelMixin extends BipedEntityModel<P
     }
 
     @Unique
-    private PlayerAnimationState determineAnimationState(PlayerEntityRenderState state, RenderStateExtension ext) {
+    private PlayerAnimationState determineAnimationState(PlayerEntityRenderState state, RenderStateExtension ext, WeaponAnimationConfig config, boolean isShieldOffhand) {
         if (state.isGliding || ext.wowmod$isRiding() || ext.wowmod$isClimbing() || ext.wowmod$isInWater() || ext.wowmod$isSwimming()) {
             wowmod$isCustomJumpActive = false;
             return PlayerAnimationState.VANILLA_OVERRIDE;
@@ -227,7 +264,33 @@ public abstract class AnimationPlayerEntityModelMixin extends BipedEntityModel<P
             else if (vy != 0.0f) return PlayerAnimationState.FALLING;
         }
 
-        if (state.limbSwingAmplitude > 0.1f) return ext.wowmod$isSprinting() ? PlayerAnimationState.SPRINTING : PlayerAnimationState.WALKING;
+        // BLOCKING CHECK
+        if (state.isUsingItem && ext.wowmod$isBlocking()) {
+            PlayerAnimationState potentialState = (state.limbSwingAmplitude > 0.1f)
+                    ? PlayerAnimationState.BLOCKING_WALKING
+                    : PlayerAnimationState.BLOCKING_IDLE;
+
+            // CRITICAL: Check if the config actually HAS an animation for this state.
+            // If the JSON didn't define "blocking", "blocking_idle", or "blocking_walking",
+            // getAnimation() will return null.
+            if (config != null && config.getAnimation(potentialState, isShieldOffhand) != null) {
+                return potentialState;
+            }
+
+            // If explicit animation is missing, fall back to Vanilla so the Shield appears correctly
+            return PlayerAnimationState.VANILLA_OVERRIDE;
+        }
+
+        // GENERAL ITEM USE (Eating, etc.) -> Vanilla
+        if (state.isUsingItem) {
+            return PlayerAnimationState.VANILLA_OVERRIDE;
+        }
+
+        // Movement
+        if (state.limbSwingAmplitude > 0.1f) {
+            return ext.wowmod$isSprinting() ? PlayerAnimationState.SPRINTING : PlayerAnimationState.WALKING;
+        }
+
         return PlayerAnimationState.IDLE;
     }
 
@@ -252,6 +315,9 @@ public abstract class AnimationPlayerEntityModelMixin extends BipedEntityModel<P
         // --- 1. CONTROLLER (Global Root) ---
         BoneModifier.applyBone(this.wowmod$controller, anim.bones.get("controller"), timeSeconds, 0, 0, 0);
         Quaternionf controllerRot = new Quaternionf().rotationZYX(this.wowmod$controller.roll, this.wowmod$controller.yaw, this.wowmod$controller.pitch);
+
+        // This variable stores the body rotation to be used by children (Head, Arms)
+        Quaternionf totalBodyRot;
 
         // --- 2. WAIST (The Master Pivot for Torso and Legs) ---
         // Pivot: 0, 12, 0 relative to Controller.
@@ -321,13 +387,17 @@ public abstract class AnimationPlayerEntityModelMixin extends BipedEntityModel<P
 
             // Used for children (Head, Arms)
             // We use bodyRot for children attached to the upper torso so they follow the bend
-            Quaternionf totalBodyRot = bodyRot;
+            totalBodyRot = bodyRot;
 
             // --- 4. HEAD (Child of Body) ---
             BoneModifier.applyBone(this.head, anim.bones.get("head"), timeSeconds, 0, 0, 0);
-            this.head.pitch += this.body.pitch;
-            this.head.yaw += this.body.yaw;
-            this.head.roll += this.body.roll;
+
+            // REMOVED BODY ROTATION INHERITANCE to fix "extreme" head movement.
+            // The head now tracks the camera directly (via re-added vanilla pitch/yaw later)
+            // and simply adds any local animation offset on top.
+            // this.head.pitch += this.body.pitch;
+            // this.head.yaw += this.body.yaw;
+            // this.head.roll += this.body.roll;
 
             // Head Pivot (0,0,0) is the same as Body Pivot (0,0,0) in vanilla.
             // So we just track the Body Position calculated above, plus any local head animation.
@@ -338,116 +408,123 @@ public abstract class AnimationPlayerEntityModelMixin extends BipedEntityModel<P
             this.head.originX = this.body.originX + headLocalAnim.x;
             this.head.originY = this.body.originY + headLocalAnim.y;
             this.head.originZ = this.body.originZ + headLocalAnim.z;
+        } else {
+            // SNEAKING: We skipped custom Body logic to preserve Vanilla Crouch.
+            // We still need a rotation for parenting arms.
+            totalBodyRot = new Quaternionf().rotationZYX(this.body.roll, this.body.yaw, this.body.pitch);
+        }
 
-            // --- 6. ARMS & SHOULDERS (Child of Upper Body) ---
-            boolean isAttacking = (animState == PlayerAnimationState.STANDING_ATTACK ||
-                    animState == PlayerAnimationState.ATTACK_STRIKE ||
-                    animState == PlayerAnimationState.ATTACK_RETURN);
-            boolean shouldAnimateArms = isAttacking || (state.handSwingProgress == 0.0f && !state.isUsingItem);
+        // --- 6. ARMS & SHOULDERS (Child of Upper Body) ---
+        boolean isAttacking = (animState == PlayerAnimationState.STANDING_ATTACK ||
+                animState == PlayerAnimationState.ATTACK_STRIKE ||
+                animState == PlayerAnimationState.ATTACK_RETURN);
+        // FIX: Added Blocking states to this check so arms animate during block
+        boolean isBlocking = (animState == PlayerAnimationState.BLOCKING_IDLE ||
+                animState == PlayerAnimationState.BLOCKING_WALKING);
+        boolean shouldAnimateArms = isAttacking || isBlocking || (state.handSwingProgress == 0.0f && !state.isUsingItem);
 
-            float vanillaRightPitch = this.rightArm.pitch;
-            float vanillaRightYaw = this.rightArm.yaw;
-            float vanillaRightRoll = this.rightArm.roll;
-            float vanillaLeftPitch = this.leftArm.pitch;
-            float vanillaLeftYaw = this.leftArm.yaw;
-            float vanillaLeftRoll = this.leftArm.roll;
+        float vanillaRightPitch = this.rightArm.pitch;
+        float vanillaRightYaw = this.rightArm.yaw;
+        float vanillaRightRoll = this.rightArm.roll;
+        float vanillaLeftPitch = this.leftArm.pitch;
+        float vanillaLeftYaw = this.leftArm.yaw;
+        float vanillaLeftRoll = this.leftArm.roll;
 
-            if (shouldAnimateArms) {
-                BoneModifier.applyBone(this.wowmod$rightShoulder, anim.bones.get("rightShoulder"), timeSeconds, RIGHT_ARM_DEFAULT_X, ARM_DEFAULT_Y, 0.0f);
-                BoneModifier.applyBone(this.wowmod$leftShoulder, anim.bones.get("leftShoulder"), timeSeconds, LEFT_ARM_DEFAULT_X, ARM_DEFAULT_Y, 0.0f);
+        if (shouldAnimateArms) {
+            BoneModifier.applyBone(this.wowmod$rightShoulder, anim.bones.get("rightShoulder"), timeSeconds, RIGHT_ARM_DEFAULT_X, ARM_DEFAULT_Y, 0.0f);
+            BoneModifier.applyBone(this.wowmod$leftShoulder, anim.bones.get("leftShoulder"), timeSeconds, LEFT_ARM_DEFAULT_X, ARM_DEFAULT_Y, 0.0f);
 
-                this.wowmod$rightShoulder.pitch += this.body.pitch;
-                this.wowmod$rightShoulder.yaw += this.body.yaw;
-                this.wowmod$rightShoulder.roll += this.body.roll;
+            this.wowmod$rightShoulder.pitch += this.body.pitch;
+            this.wowmod$rightShoulder.yaw += this.body.yaw;
+            this.wowmod$rightShoulder.roll += this.body.roll;
 
-                this.wowmod$leftShoulder.pitch += this.body.pitch;
-                this.wowmod$leftShoulder.yaw += this.body.yaw;
-                this.wowmod$leftShoulder.roll += this.body.roll;
+            this.wowmod$leftShoulder.pitch += this.body.pitch;
+            this.wowmod$leftShoulder.yaw += this.body.yaw;
+            this.wowmod$leftShoulder.roll += this.body.roll;
 
-                // Shoulder Offset relative to Body Pivot (0,0,0)
-                // Default Shoulder: (-5, 2, 0).
-                Vector3f rightRel = new Vector3f(
-                        this.wowmod$rightShoulder.originX,
-                        this.wowmod$rightShoulder.originY,
-                        this.wowmod$rightShoulder.originZ
-                );
-                // Rotate by Body Rotation (so shoulders lean with body)
-                rightRel.rotate(totalBodyRot);
+            // Shoulder Offset relative to Body Pivot (0,0,0)
+            // Default Shoulder: (-5, 2, 0).
+            Vector3f rightRel = new Vector3f(
+                    this.wowmod$rightShoulder.originX,
+                    this.wowmod$rightShoulder.originY,
+                    this.wowmod$rightShoulder.originZ
+            );
+            // Rotate by Body Rotation (so shoulders lean with body)
+            rightRel.rotate(totalBodyRot);
 
-                this.wowmod$rightShoulder.originX = this.body.originX + rightRel.x;
-                this.wowmod$rightShoulder.originY = this.body.originY + rightRel.y;
-                this.wowmod$rightShoulder.originZ = this.body.originZ + rightRel.z;
+            this.wowmod$rightShoulder.originX = this.body.originX + rightRel.x;
+            this.wowmod$rightShoulder.originY = this.body.originY + rightRel.y;
+            this.wowmod$rightShoulder.originZ = this.body.originZ + rightRel.z;
 
-                Vector3f leftRel = new Vector3f(
-                        this.wowmod$leftShoulder.originX,
-                        this.wowmod$leftShoulder.originY,
-                        this.wowmod$leftShoulder.originZ
-                );
-                leftRel.rotate(totalBodyRot);
+            Vector3f leftRel = new Vector3f(
+                    this.wowmod$leftShoulder.originX,
+                    this.wowmod$leftShoulder.originY,
+                    this.wowmod$leftShoulder.originZ
+            );
+            leftRel.rotate(totalBodyRot);
 
-                this.wowmod$leftShoulder.originX = this.body.originX + leftRel.x;
-                this.wowmod$leftShoulder.originY = this.body.originY + leftRel.y;
-                this.wowmod$leftShoulder.originZ = this.body.originZ + leftRel.z;
+            this.wowmod$leftShoulder.originX = this.body.originX + leftRel.x;
+            this.wowmod$leftShoulder.originY = this.body.originY + leftRel.y;
+            this.wowmod$leftShoulder.originZ = this.body.originZ + leftRel.z;
 
-                // Arms (Child of Shoulder) - Logic Remains mostly same, just anchored to corrected shoulder
-                Animation.Bone rightArmBone = anim.bones.get("rightArm");
-                if (rightArmBone != null) BoneModifier.applyBone(this.rightArm, rightArmBone, timeSeconds, 0.0f, 0.0f, 0.0f);
-                else { this.rightArm.pitch = 0; this.rightArm.yaw = 0; this.rightArm.roll = 0; this.rightArm.originX = 0; this.rightArm.originY = 0; this.rightArm.originZ = 0; }
+            // Arms (Child of Shoulder) - Logic Remains mostly same, just anchored to corrected shoulder
+            Animation.Bone rightArmBone = anim.bones.get("rightArm");
+            if (rightArmBone != null) BoneModifier.applyBone(this.rightArm, rightArmBone, timeSeconds, 0.0f, 0.0f, 0.0f);
+            else { this.rightArm.pitch = 0; this.rightArm.yaw = 0; this.rightArm.roll = 0; this.rightArm.originX = 0; this.rightArm.originY = 0; this.rightArm.originZ = 0; }
 
-                Animation.Bone leftArmBone = anim.bones.get("leftArm");
-                if (leftArmBone != null) BoneModifier.applyBone(this.leftArm, leftArmBone, timeSeconds, 0.0f, 0.0f, 0.0f);
-                else { this.leftArm.pitch = 0; this.leftArm.yaw = 0; this.leftArm.roll = 0; this.leftArm.originX = 0; this.leftArm.originY = 0; this.leftArm.originZ = 0; }
+            Animation.Bone leftArmBone = anim.bones.get("leftArm");
+            if (leftArmBone != null) BoneModifier.applyBone(this.leftArm, leftArmBone, timeSeconds, 0.0f, 0.0f, 0.0f);
+            else { this.leftArm.pitch = 0; this.leftArm.yaw = 0; this.leftArm.roll = 0; this.leftArm.originX = 0; this.leftArm.originY = 0; this.leftArm.originZ = 0; }
 
-                this.rightArm.pitch += this.wowmod$rightShoulder.pitch;
-                this.rightArm.yaw += this.wowmod$rightShoulder.yaw;
-                this.rightArm.roll += this.wowmod$rightShoulder.roll;
+            this.rightArm.pitch += this.wowmod$rightShoulder.pitch;
+            this.rightArm.yaw += this.wowmod$rightShoulder.yaw;
+            this.rightArm.roll += this.wowmod$rightShoulder.roll;
 
-                this.leftArm.pitch += this.wowmod$leftShoulder.pitch;
-                this.leftArm.yaw += this.wowmod$leftShoulder.yaw;
-                this.leftArm.roll += this.wowmod$leftShoulder.roll;
+            this.leftArm.pitch += this.wowmod$leftShoulder.pitch;
+            this.leftArm.yaw += this.wowmod$leftShoulder.yaw;
+            this.leftArm.roll += this.wowmod$leftShoulder.roll;
 
-                Quaternionf rightShoulderRot = new Quaternionf().rotationZYX(this.wowmod$rightShoulder.roll, this.wowmod$rightShoulder.yaw, this.wowmod$rightShoulder.pitch);
-                Quaternionf leftShoulderRot = new Quaternionf().rotationZYX(this.wowmod$leftShoulder.roll, this.wowmod$leftShoulder.yaw, this.wowmod$leftShoulder.pitch);
+            Quaternionf rightShoulderRot = new Quaternionf().rotationZYX(this.wowmod$rightShoulder.roll, this.wowmod$rightShoulder.yaw, this.wowmod$rightShoulder.pitch);
+            Quaternionf leftShoulderRot = new Quaternionf().rotationZYX(this.wowmod$leftShoulder.roll, this.wowmod$leftShoulder.yaw, this.wowmod$leftShoulder.pitch);
 
-                Vector3f rightArmPos = new Vector3f(this.rightArm.originX, this.rightArm.originY, this.rightArm.originZ);
-                Vector3f leftArmPos = new Vector3f(this.leftArm.originX, this.leftArm.originY, this.leftArm.originZ);
+            Vector3f rightArmPos = new Vector3f(this.rightArm.originX, this.rightArm.originY, this.rightArm.originZ);
+            Vector3f leftArmPos = new Vector3f(this.leftArm.originX, this.leftArm.originY, this.leftArm.originZ);
 
-                rightArmPos.rotate(rightShoulderRot);
-                leftArmPos.rotate(leftShoulderRot);
+            rightArmPos.rotate(rightShoulderRot);
+            leftArmPos.rotate(leftShoulderRot);
 
-                this.rightArm.originX = this.wowmod$rightShoulder.originX + rightArmPos.x;
-                this.rightArm.originY = this.wowmod$rightShoulder.originY + rightArmPos.y;
-                this.rightArm.originZ = this.wowmod$rightShoulder.originZ + rightArmPos.z;
+            this.rightArm.originX = this.wowmod$rightShoulder.originX + rightArmPos.x;
+            this.rightArm.originY = this.wowmod$rightShoulder.originY + rightArmPos.y;
+            this.rightArm.originZ = this.wowmod$rightShoulder.originZ + rightArmPos.z;
 
-                this.leftArm.originX = this.wowmod$leftShoulder.originX + leftArmPos.x;
-                this.leftArm.originY = this.wowmod$leftShoulder.originY + leftArmPos.y;
-                this.leftArm.originZ = this.wowmod$leftShoulder.originZ + leftArmPos.z;
+            this.leftArm.originX = this.wowmod$leftShoulder.originX + leftArmPos.x;
+            this.leftArm.originY = this.wowmod$leftShoulder.originY + leftArmPos.y;
+            this.leftArm.originZ = this.wowmod$leftShoulder.originZ + leftArmPos.z;
 
-            } else {
-                // Vanilla Fallback
-                this.rightArm.pitch = vanillaRightPitch + this.body.pitch;
-                this.rightArm.yaw = vanillaRightYaw + this.body.yaw;
-                this.rightArm.roll = vanillaRightRoll + this.body.roll;
-                this.rightArm.originX = RIGHT_ARM_DEFAULT_X; this.rightArm.originY = ARM_DEFAULT_Y; this.rightArm.originZ = 0.0f;
+        } else {
+            // Vanilla Fallback
+            this.rightArm.pitch = vanillaRightPitch + this.body.pitch;
+            this.rightArm.yaw = vanillaRightYaw + this.body.yaw;
+            this.rightArm.roll = vanillaRightRoll + this.body.roll;
+            this.rightArm.originX = RIGHT_ARM_DEFAULT_X; this.rightArm.originY = ARM_DEFAULT_Y; this.rightArm.originZ = 0.0f;
 
-                this.leftArm.pitch = vanillaLeftPitch + this.body.pitch;
-                this.leftArm.yaw = vanillaLeftYaw + this.body.yaw;
-                this.leftArm.roll = vanillaLeftRoll + this.body.roll;
-                this.leftArm.originX = LEFT_ARM_DEFAULT_X; this.leftArm.originY = ARM_DEFAULT_Y; this.leftArm.originZ = 0.0f;
+            this.leftArm.pitch = vanillaLeftPitch + this.body.pitch;
+            this.leftArm.yaw = vanillaLeftYaw + this.body.yaw;
+            this.leftArm.roll = vanillaLeftRoll + this.body.roll;
+            this.leftArm.originX = LEFT_ARM_DEFAULT_X; this.leftArm.originY = ARM_DEFAULT_Y; this.leftArm.originZ = 0.0f;
 
-                // Pivot fallback: Rotate relative to Body Pivot (which is calculated correctly now)
-                Vector3f rightArmPos = new Vector3f(this.rightArm.originX, this.rightArm.originY, this.rightArm.originZ);
-                rightArmPos.rotate(totalBodyRot);
-                this.rightArm.originX = this.body.originX + rightArmPos.x;
-                this.rightArm.originY = this.body.originY + rightArmPos.y;
-                this.rightArm.originZ = this.body.originZ + rightArmPos.z;
+            // Pivot fallback: Rotate relative to Body Pivot (which is calculated correctly now)
+            Vector3f rightArmPos = new Vector3f(this.rightArm.originX, this.rightArm.originY, this.rightArm.originZ);
+            rightArmPos.rotate(totalBodyRot);
+            this.rightArm.originX = this.body.originX + rightArmPos.x;
+            this.rightArm.originY = this.body.originY + rightArmPos.y;
+            this.rightArm.originZ = this.body.originZ + rightArmPos.z;
 
-                Vector3f leftArmPos = new Vector3f(this.leftArm.originX, this.leftArm.originY, this.leftArm.originZ);
-                leftArmPos.rotate(totalBodyRot);
-                this.leftArm.originX = this.body.originX + leftArmPos.x;
-                this.leftArm.originY = this.body.originY + leftArmPos.y;
-                this.leftArm.originZ = this.body.originZ + leftArmPos.z;
-            }
+            Vector3f leftArmPos = new Vector3f(this.leftArm.originX, this.leftArm.originY, this.leftArm.originZ);
+            leftArmPos.rotate(totalBodyRot);
+            this.leftArm.originX = this.body.originX + leftArmPos.x;
+            this.leftArm.originY = this.body.originY + leftArmPos.y;
+            this.leftArm.originZ = this.body.originZ + leftArmPos.z;
         }
 
         // --- 5. HIPS (Child of Waist) ---

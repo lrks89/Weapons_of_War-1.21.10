@@ -46,4 +46,8 @@ public interface RenderStateExtension {
     // --- NEW: Attack Duration for Split Animation ---
     int wowmod$getHandSwingDuration();
     void wowmod$setHandSwingDuration(int ticks);
+
+    // --- NEW: Blocking State ---
+    boolean wowmod$isBlocking();
+    void wowmod$setBlocking(boolean blocking);
 }

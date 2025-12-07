@@ -16,7 +16,11 @@ public enum PlayerAnimationState {
 
     // Split Phases
     ATTACK_STRIKE("attack_strike"),
-    ATTACK_RETURN("attack_return");
+    ATTACK_RETURN("attack_return"),
+
+    // Blocking States
+    BLOCKING_IDLE("blocking_idle_shield"),
+    BLOCKING_WALKING("blocking_walking_shield");
 
     private final String defaultAnimationName;
 
