@@ -14,7 +14,8 @@
     "BlockingPlayerEntityMixin",
     "HighJumpClientPlayerMixin",
     "HighJumpHudMixin",
-    "HighJumpLivingEntityMixin"
+    "HighJumpLivingEntityMixin",
+    "LongJumpInputMixin"
   ],
   "injectors": {
     "defaultRequire": 1

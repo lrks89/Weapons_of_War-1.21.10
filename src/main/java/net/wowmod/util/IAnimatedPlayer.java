@@ -9,4 +9,8 @@ public interface IAnimatedPlayer {
     // High Jump Mechanics
     float wowmod$getHighJumpCharge();
     void wowmod$setHighJumpCharge(float charge);
+
+    // Long Jump Mechanics
+    int wowmod$getLongJumpCooldown();
+    void wowmod$setLongJumpCooldown(int ticks);
 }

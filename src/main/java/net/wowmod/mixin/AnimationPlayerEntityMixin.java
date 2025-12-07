@@ -13,16 +13,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class AnimationPlayerEntityMixin implements IParryPlayer, IAnimatedPlayer {
 
     // --- IParryPlayer Fields ---
-    @Unique
-    private long wowmod$lastParryTime;
+    @Unique private long wowmod$lastParryTime;
 
     // --- IAnimatedPlayer Fields ---
     @Unique private long wowmod$lastLandTime;
     @Unique private boolean wowmod$wasOnGround;
     @Unique private long wowmod$lastFluidContactTime = -999;
-
-    // High Jump Fields
     @Unique private float wowmod$highJumpCharge = 0.0f;
+
+    // NEW: Long Jump Cooldown
+    @Unique private int wowmod$longJumpCooldown = 0;
 
     // IParryPlayer Implementation
     @Override public long wowmod_getLastParryTime() { return this.wowmod$lastParryTime; }
@@ -37,9 +37,18 @@ public class AnimationPlayerEntityMixin implements IParryPlayer, IAnimatedPlayer
     @Override public float wowmod$getHighJumpCharge() { return this.wowmod$highJumpCharge; }
     @Override public void wowmod$setHighJumpCharge(float charge) { this.wowmod$highJumpCharge = charge; }
 
+    @Override public int wowmod$getLongJumpCooldown() { return this.wowmod$longJumpCooldown; }
+    @Override public void wowmod$setLongJumpCooldown(int ticks) { this.wowmod$longJumpCooldown = ticks; }
+
     @Inject(method = "tick", at = @At("HEAD"))
     private void trackLandingAndGroundState(CallbackInfo ci) {
         PlayerEntity self = (PlayerEntity) (Object) this;
+
+        // Tick down cooldowns
+        if (this.wowmod$longJumpCooldown > 0) {
+            this.wowmod$longJumpCooldown--;
+        }
+
         boolean onGround = self.isOnGround();
 
         // 1. Landing Detection
