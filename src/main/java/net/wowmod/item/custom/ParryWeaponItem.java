@@ -14,12 +14,29 @@ import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 import net.wowmod.util.IParryPlayer;
 
-public class ParryWeaponItem extends Item {
+public class ParryWeaponItem extends Item implements IParryItem {
     private static final int PARRY_COOLDOWN_TICKS = 10;
 
-    public ParryWeaponItem(Settings settings) {
+    private final int parryWindow;
+    private final float damageReduction;
+
+    public ParryWeaponItem(Settings settings, int parryWindow, float damageReduction) {
         super(settings);
+        this.parryWindow = parryWindow;
+        this.damageReduction = damageReduction;
     }
+
+    @Override
+    public int getParryWindow() {
+        return this.parryWindow;
+    }
+
+    @Override
+    public float getDamageReduction() {
+        return this.damageReduction;
+    }
+
+    // Removed appendTooltip method. We will use ItemTooltipCallback in the Client Initializer instead.
 
     @Override
     public UseAction getUseAction(ItemStack stack) {

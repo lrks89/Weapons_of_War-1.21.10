@@ -10,13 +10,25 @@ import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 import net.wowmod.util.IParryPlayer;
 
-public class ParryShieldItem extends ShieldItem {
+public class ParryShieldItem extends ShieldItem implements IParryItem {
 
     private static final int PARRY_COOLDOWN_TICKS = 8;
 
     public ParryShieldItem(Settings settings) {
         super(settings);
     }
+
+    @Override
+    public int getParryWindow() {
+        return 5; // Standard window for shields
+    }
+
+    @Override
+    public float getDamageReduction() {
+        return 1.0f; // 100% block
+    }
+
+    // Removed appendTooltip override. Using Client ItemTooltipCallback instead.
 
     @Override
     public UseAction getUseAction(ItemStack stack) {

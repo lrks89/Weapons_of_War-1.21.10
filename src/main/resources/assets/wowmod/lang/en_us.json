@@ -9,5 +9,8 @@
   "item.wowmod.test_shield": "Test Shield",
 
   "attribute.name.entity_interaction_range": "Attack Range",
-  "attack_range": "Attack Range"
+  "attack_range": "Attack Range",
+
+  "item.wowmod.tooltip.parry_window": " %s Parry Window",
+  "item.wowmod.tooltip.damage_reduction": " %s%% Blocking"
 }

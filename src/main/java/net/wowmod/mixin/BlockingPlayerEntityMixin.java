@@ -16,6 +16,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.wowmod.WeaponsOfWar;
+import net.wowmod.item.custom.IParryItem;
 import net.wowmod.item.custom.ParryShieldItem;
 import net.wowmod.item.custom.ParryWeaponItem;
 import net.wowmod.util.IParryPlayer;
@@ -51,7 +52,7 @@ public abstract class BlockingPlayerEntityMixin implements IParryPlayer {
     // --- End IParryPlayer implementation ---
 
     // --- CONSTANTS ---
-    private static final int PARRY_WINDOW_TICKS = 5;
+    // Removed static PARRY_WINDOW_TICKS, now dynamic from item
     private static final int PARRIED_STUN_DURATION = 20; // 1 second
     private static final int AXE_COOLDOWN_DURATION = 100; // 5 seconds (20 ticks per second)
 
@@ -76,15 +77,22 @@ public abstract class BlockingPlayerEntityMixin implements IParryPlayer {
             return;
         }
 
+        ItemStack activeStack = player.getActiveItem();
+        Item activeItem = activeStack.getItem();
+
+        if (!(activeItem instanceof IParryItem parryItem)) {
+            return; // Not a parry item, standard block behavior applies elsewhere
+        }
+
         IParryPlayer parryPlayer = (IParryPlayer) player;
         long timeDelta = serverWorld.getTime() - parryPlayer.wowmod_getLastParryTime();
 
-        // Check if it's a "Perfect Parry"
-        if (timeDelta <= PARRY_WINDOW_TICKS) {
+        // Check if it's a "Perfect Parry" using the item's specific window
+        if (timeDelta <= parryItem.getParryWindow()) {
             Entity attacker = source.getAttacker();
 
             if (attacker instanceof LivingEntity livingAttacker) {
-                boolean isParryShield = player.getActiveItem().getItem() instanceof ParryShieldItem;
+                boolean isParryShield = activeItem instanceof ParryShieldItem;
 
                 if (isParryShield) {
                     // ParryShield Sound
@@ -155,13 +163,18 @@ public abstract class BlockingPlayerEntityMixin implements IParryPlayer {
         // If not a counter-attack, check for a regular block
         if (!player.isBlocking()) { return originalAmount; }
 
+        ItemStack activeStack = player.getActiveItem();
+        Item activeItem = activeStack.getItem();
+
+        if (!(activeItem instanceof IParryItem parryItem)) {
+            return originalAmount;
+        }
+
         IParryPlayer parryPlayer = (IParryPlayer) player;
         long timeDelta = world.getTime() - parryPlayer.wowmod_getLastParryTime();
 
         // Make sure we are *not* in the perfect parry window
-        if (timeDelta > PARRY_WINDOW_TICKS) {
-            ItemStack activeStack = player.getActiveItem();
-            Item activeItem = activeStack.getItem();
+        if (timeDelta > parryItem.getParryWindow()) {
 
             boolean isParryShield = activeItem instanceof ParryShieldItem;
             boolean isWeaponItem = activeItem instanceof ParryWeaponItem;
@@ -227,14 +240,14 @@ public abstract class BlockingPlayerEntityMixin implements IParryPlayer {
                             SoundEvents.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS,
                             1.0F, 1.0F + world.random.nextFloat() * 0.1F
                     );
-                    return 0.0F; // Block 100%
+                    return originalAmount * (1.0F - parryItem.getDamageReduction()); // Use configured reduction
                 } else if (isWeaponItem) {
                     world.playSound(
                             null, player.getX(), player.getY(), player.getZ(),
                             SoundEvents.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS,
                             1.2F, 1.1F + world.random.nextFloat() * 0.1F
                     );
-                    return originalAmount * 0.5F; // Block 50%
+                    return originalAmount * (1.0F - parryItem.getDamageReduction()); // Use configured reduction
                 }
             }
         }
