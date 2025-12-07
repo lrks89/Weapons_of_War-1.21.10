@@ -63,6 +63,13 @@ public abstract class BlockingLivingEntityMixin implements IParryStunnedEntity {
                 entity.setAttacker(null);
             }
         }
+
+        // --- PARTICLE FIX: Stop sprinting if blocking ---
+        if ((Object) this instanceof PlayerEntity player) {
+            if (player.isBlocking() && player.isSprinting()) {
+                player.setSprinting(false);
+            }
+        }
     }
 
     // --- REFINEMENT: MOVED FROM PlayerEntityBlockingMixin ---

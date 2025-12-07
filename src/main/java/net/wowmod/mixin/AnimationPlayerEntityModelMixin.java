@@ -172,12 +172,18 @@ public abstract class AnimationPlayerEntityModelMixin extends BipedEntityModel<P
         resetBoneToDefault(this.wowmod$leftHip, LEFT_LEG_DEFAULT_X, LEG_DEFAULT_Y, 0.0f);
 
         // --- RESET VANILLA BONES (Prevent Mixing) ---
-        // Fix: Reset head to avoid double rotation application
-        resetBoneToDefault(this.head, 0.0f, 0.0f, 0.0f);
+        // Always reset Head Rotation (to avoid double application when we add vanilla back later)
+        this.head.pitch = 0;
+        this.head.yaw = 0;
+        this.head.roll = 0;
 
         boolean isSneaking = (animState == PlayerAnimationState.SNEAKING);
 
         if (!isSneaking) {
+            // If NOT sneaking, we reset positions fully to allow custom animation control.
+            // When sneaking, we SKIP resetting positions for Head, Body, Legs to keep vanilla sneak offsets.
+            this.head.originX = 0; this.head.originY = 0; this.head.originZ = 0;
+
             resetBoneToDefault(this.body, 0.0f, 0.0f, 0.0f);
             resetBoneToDefault(this.rightLeg, RIGHT_LEG_DEFAULT_X, LEG_DEFAULT_Y, 0.0f);
             resetBoneToDefault(this.leftLeg, LEFT_LEG_DEFAULT_X, LEG_DEFAULT_Y, 0.0f);
