@@ -21,6 +21,9 @@ public class AnimationPlayerEntityMixin implements IParryPlayer, IAnimatedPlayer
     @Unique private boolean wowmod$wasOnGround;
     @Unique private long wowmod$lastFluidContactTime = -999;
 
+    // High Jump Fields
+    @Unique private float wowmod$highJumpCharge = 0.0f;
+
     // IParryPlayer Implementation
     @Override public long wowmod_getLastParryTime() { return this.wowmod$lastParryTime; }
     @Override public void wowmod_setLastParryTime(long time) { this.wowmod$lastParryTime = time; }
@@ -30,6 +33,9 @@ public class AnimationPlayerEntityMixin implements IParryPlayer, IAnimatedPlayer
     @Override public void wowmod$setLastLandTime(long time) { this.wowmod$lastLandTime = time; }
     @Override public boolean wowmod$wasOnGround() { return this.wowmod$wasOnGround; }
     @Override public void wowmod$setWasOnGround(boolean onGround) { this.wowmod$wasOnGround = onGround; }
+
+    @Override public float wowmod$getHighJumpCharge() { return this.wowmod$highJumpCharge; }
+    @Override public void wowmod$setHighJumpCharge(float charge) { this.wowmod$highJumpCharge = charge; }
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void trackLandingAndGroundState(CallbackInfo ci) {
@@ -42,12 +48,10 @@ public class AnimationPlayerEntityMixin implements IParryPlayer, IAnimatedPlayer
         }
 
         // 2. Fluid Contact Cooldown
-        // Update timestamp if the player is currently touching or submerged in any fluid
         if (self.isTouchingWater() || self.isInLava()) {
             this.wowmod$lastFluidContactTime = self.getEntityWorld().getTime();
         }
 
-        // 3. Update previous state
         this.wowmod$wasOnGround = onGround;
     }
 }

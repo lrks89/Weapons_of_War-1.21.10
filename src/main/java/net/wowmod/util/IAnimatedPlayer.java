@@ -5,4 +5,8 @@ public interface IAnimatedPlayer {
     void wowmod$setLastLandTime(long time);
     boolean wowmod$wasOnGround();
     void wowmod$setWasOnGround(boolean onGround);
+
+    // High Jump Mechanics
+    float wowmod$getHighJumpCharge();
+    void wowmod$setHighJumpCharge(float charge);
 }

@@ -11,7 +11,10 @@
     "AnimationPlayerEntityRendererMixin",
     "AnimationPlayerEntityRenderStateMixin",
     "BlockingLivingEntityMixin",
-    "BlockingPlayerEntityMixin"
+    "BlockingPlayerEntityMixin",
+    "HighJumpClientPlayerMixin",
+    "HighJumpHudMixin",
+    "HighJumpLivingEntityMixin"
   ],
   "injectors": {
     "defaultRequire": 1
