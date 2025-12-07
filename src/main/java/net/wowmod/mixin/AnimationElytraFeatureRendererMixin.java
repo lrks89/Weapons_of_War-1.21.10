@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.joml.Quaternionf;
 
 @Mixin(ElytraFeatureRenderer.class)
-public abstract class ElytraFeatureRendererMixin {
+public abstract class AnimationElytraFeatureRendererMixin {
 
     // Helper to get the context model from the FeatureRenderer parent class.
     private EntityModel<?> getContextModelCasted() {

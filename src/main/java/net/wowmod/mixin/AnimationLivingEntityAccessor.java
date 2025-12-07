@@ -5,7 +5,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(LivingEntity.class)
-public interface LivingEntityAccessor {
+public interface AnimationLivingEntityAccessor {
     // This creates a public bridge to the protected 'getHandSwingDuration' method
     @Invoker("getHandSwingDuration")
     int wowmod$getHandSwingDuration();

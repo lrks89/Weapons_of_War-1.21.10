@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(PlayerEntity.class)
-public class PlayerEntityMixin implements IParryPlayer, IAnimatedPlayer {
+public class AnimationPlayerEntityMixin implements IParryPlayer, IAnimatedPlayer {
 
     // --- IParryPlayer Fields ---
     @Unique

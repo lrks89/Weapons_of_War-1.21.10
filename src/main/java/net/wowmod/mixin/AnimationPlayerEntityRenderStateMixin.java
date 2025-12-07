@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
 @Mixin(PlayerEntityRenderState.class)
-public class PlayerEntityRenderStateMixin implements RenderStateExtension {
+public class AnimationPlayerEntityRenderStateMixin implements RenderStateExtension {
 
     // Fields tracking vanilla data injected by PlayerEntityRendererMixin:
     @Unique private boolean wowmod$sprinting;

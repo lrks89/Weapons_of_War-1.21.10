@@ -16,6 +16,7 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.Identifier;
 import net.wowmod.WeaponsOfWar;
+import net.wowmod.item.custom.ParryShieldItem;
 import net.wowmod.item.custom.WeaponItem;
 import java.util.function.Function;
 
@@ -43,6 +44,9 @@ public class ModItems {
 
     public static final Item M2613A_SPEAR = registerItem("m2613a_spear",
             WeaponItem::new, createWeaponSettings(5.0, -2.6f, 2.0));
+
+    public static final Item TEST_SHIELD = registerItem("test_shield",
+            ParryShieldItem::new, new Item.Settings().maxDamage(500));
 
     // --- HELPER METHODS ---
 
@@ -92,6 +96,8 @@ public class ModItems {
         entries.add(M1223A_LONGSWORD);
         entries.add(M1513A_GREATSWORD);
         entries.add(M2613A_SPEAR);
+
+        entries.add(TEST_SHIELD);
     }
 
     private static <T extends Item> T registerItem(String name, Function<Item.Settings, T> itemFactory, Item.Settings settings) {

@@ -29,7 +29,7 @@ import org.joml.Vector3f;
 
 @SuppressWarnings("deprecation")
 @Mixin(PlayerEntityModel.class)
-public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEntityRenderState> {
+public abstract class AnimationPlayerEntityModelMixin extends BipedEntityModel<PlayerEntityRenderState> {
 
     // Removed static to prevent state leaking between players/instances
     @Unique private boolean wowmod$isCustomJumpActive = false;
@@ -59,7 +59,7 @@ public abstract class PlayerEntityModelMixin extends BipedEntityModel<PlayerEnti
     @Unique private static final float LEFT_LEG_DEFAULT_X = 1.9f;
     @Unique private static final float LEG_DEFAULT_Y = 12.0f;
 
-    public PlayerEntityModelMixin(ModelPart root) {
+    public AnimationPlayerEntityModelMixin(ModelPart root) {
         super(root);
     }
 

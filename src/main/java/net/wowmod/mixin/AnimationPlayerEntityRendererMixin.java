@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(LivingEntityRenderer.class)
-public class PlayerEntityRendererMixin {
+public class AnimationPlayerEntityRendererMixin {
 
     @Inject(method = "updateRenderState(Lnet/minecraft/entity/LivingEntity;Lnet/minecraft/client/render/entity/state/LivingEntityRenderState;F)V", at = @At("TAIL"))
     private void captureSprinting(LivingEntity entity, LivingEntityRenderState state, float tickDelta, CallbackInfo ci) {
@@ -41,7 +41,7 @@ public class PlayerEntityRendererMixin {
 
                 // --- NEW: Capture Swing Duration via Accessor ---
                 // We cast to LivingEntityAccessor to access the protected method
-                int duration = ((LivingEntityAccessor) player).wowmod$getHandSwingDuration();
+                int duration = ((AnimationLivingEntityAccessor) player).wowmod$getHandSwingDuration();
                 extendedState.wowmod$setHandSwingDuration(duration);
 
                 if (player instanceof IAnimatedPlayer animatedPlayer) {
