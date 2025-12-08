@@ -8,6 +8,11 @@
   "item.wowmod.m2613a_spear": "Iron Spear",
   "item.wowmod.test_shield": "Test Shield",
 
+  "item.minecraft.potion.effect.slimed_potion": "Potion of Slime",
+  "item.minecraft.splash_potion.effect.slimed_potion": "Slash Potion of Slime",
+  "item.minecraft.lingering_potion.effect.slimed_potion": "Lingering Potion of Slime",
+
+
   "effect.wowmod.slimed": "Slimed",
 
   "attribute.name.entity_interaction_range": "Attack Range",
