@@ -18,10 +18,11 @@
     "ItemAccessor",
     "LongJumpInputMixin",
     "PotionBrewingMixin",
-    "SlimeEntityMixin",
-    "ThrowablePotionBaseMixin",
-    "SplashPotionItemChargeMixin",
-    "LingeringPotionItemChargeMixin"
+    "PotionThrowableBaseMixin",
+    "PotionSplashItemChargeMixin",
+    "PotionLingeringItemChargeMixin",
+    "SlimeEntityMixin"
+
 
   ],
   "injectors": {

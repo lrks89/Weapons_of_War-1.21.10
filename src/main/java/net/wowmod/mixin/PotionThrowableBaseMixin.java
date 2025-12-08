@@ -10,8 +10,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.LingeringPotionItem;
 import net.minecraft.item.SplashPotionItem;
 import net.minecraft.item.consume.UseAction;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -20,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 // --- MIXIN 1: SHARED LOGIC (Targets the base class for general hooks) ---
 @Mixin(Item.class)
-public abstract class ThrowablePotionBaseMixin {
+public abstract class PotionThrowableBaseMixin {
 
     // --- Configuration Constants ---
     private static final int MAX_CHARGE_DURATION = 20; // 1 second max charge

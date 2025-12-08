@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 // --- MIXIN: SPLASH POTION FIX (Targets the subclass to cancel instant throw) ---
 @Mixin(SplashPotionItem.class)
-public abstract class SplashPotionItemChargeMixin {
+public abstract class PotionSplashItemChargeMixin {
 
     // Inject and cancel the subclass's 'use' method to initiate charging.
     @Inject(method = "use", at = @At("HEAD"), cancellable = true)

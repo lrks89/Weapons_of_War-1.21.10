@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 // --- MIXIN: LINGERING POTION FIX (Targets the subclass to cancel instant throw) ---
 @Mixin(LingeringPotionItem.class)
-public abstract class LingeringPotionItemChargeMixin { // Removed 'extends Item'
+public abstract class PotionLingeringItemChargeMixin { // Removed 'extends Item'
 
     // Inject and cancel the subclass's 'use' method to initiate charging.
     @Inject(method = "use", at = @At("HEAD"), cancellable = true)
