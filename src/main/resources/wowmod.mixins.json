@@ -17,13 +17,11 @@
     "HighJumpLivingEntityMixin",
     "ItemAccessor",
     "LongJumpInputMixin",
+    "MobSlimeEntityMixin",
     "PotionBrewingMixin",
     "PotionThrowableBaseMixin",
     "PotionSplashItemChargeMixin",
-    "PotionLingeringItemChargeMixin",
-    "SlimeEntityMixin"
-
-
+    "PotionLingeringItemChargeMixin"
   ],
   "injectors": {
     "defaultRequire": 1

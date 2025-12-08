@@ -14,9 +14,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(SlimeEntity.class)
-public abstract class SlimeEntityMixin extends MobEntity {
+public abstract class MobSlimeEntityMixin extends MobEntity {
 
-    protected SlimeEntityMixin(EntityType<? extends MobEntity> entityType, World world) {
+    protected MobSlimeEntityMixin(EntityType<? extends MobEntity> entityType, World world) {
         super(entityType, world);
     }
 
