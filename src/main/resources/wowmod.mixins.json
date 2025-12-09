@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "AnimationElytraFeatureRendererMixin",
+    "AnimationHeldItemRendererMixin",
     "AnimationLivingEntityAccessor",
     "AnimationLivingEntityMixin",
     "AnimationPlayerEntityMixin",
@@ -15,7 +16,9 @@
     "HighJumpClientPlayerMixin",
     "HighJumpHudMixin",
     "HighJumpLivingEntityMixin",
+    "InGameHudMixin",
     "ItemAccessor",
+    "ItemRendererCooldownMixin",
     "LongJumpInputMixin",
     "MobSlimeEntityMixin",
     "PotionBrewingMixin",
