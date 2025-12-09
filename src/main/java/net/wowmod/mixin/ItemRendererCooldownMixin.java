@@ -4,6 +4,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.player.ItemCooldownManager;
 import net.minecraft.item.ItemStack;
+import net.wowmod.item.custom.DualWieldedWeaponItem;
 import net.wowmod.item.custom.TwoHandedWeaponItem;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -29,8 +30,8 @@ public class ItemRendererCooldownMixin {
             ItemStack mainHand = player.getMainHandStack();
             ItemStack offHand = player.getOffHandStack();
 
-            // 1. Check if holding a Two-Handed Weapon in Main Hand
-            if (mainHand.getItem() instanceof TwoHandedWeaponItem) {
+            // 1. Check if holding a Two-Handed OR DualWielded Weapon in Main Hand
+            if (mainHand.getItem() instanceof TwoHandedWeaponItem || mainHand.getItem() instanceof DualWieldedWeaponItem) {
 
                 // 2. Check if the item being queried is the Offhand Stack
                 if (stack == offHand) {

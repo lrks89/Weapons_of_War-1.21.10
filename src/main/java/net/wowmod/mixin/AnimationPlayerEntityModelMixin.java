@@ -13,6 +13,7 @@ import net.wowmod.animation.player_animations.Animation;
 import net.wowmod.animation.player_animations.AnimationLoader;
 import net.wowmod.animation.player_animations.BoneModifier;
 import net.wowmod.animation.player_animations.player_weapons.WeaponAnimationConfig;
+import net.wowmod.item.custom.DualWieldedWeaponItem;
 import net.wowmod.item.custom.TwoHandedWeaponItem;
 import net.wowmod.logic.AnimationStateLogic;
 import net.wowmod.util.PlayerModelUtils;
@@ -178,11 +179,15 @@ public abstract class AnimationPlayerEntityModelMixin extends BipedEntityModel<P
         ItemStack mainHand = ext.wowmod$getMainHandStack();
         // Check if holding a TwoHandedWeapon
         if (!mainHand.isEmpty() && mainHand.getItem() instanceof TwoHandedWeaponItem) {
-            // Scale offhand item bone to 0 to make it invisible
-            if (this.wowmod$leftItem != null) {
-                this.wowmod$leftItem.xScale = 0.0f;
-                this.wowmod$leftItem.yScale = 0.0f;
-                this.wowmod$leftItem.zScale = 0.0f;
+            // FIX: If it is a DualWieldedWeaponItem, we DO NOT hide the offhand bone.
+            // We want it visible so the HeldItemRendererMixin can render the duplicate item on it.
+            if (!(mainHand.getItem() instanceof DualWieldedWeaponItem)) {
+                // Not dual wielded -> Pure Two Handed -> Hide offhand item bone
+                if (this.wowmod$leftItem != null) {
+                    this.wowmod$leftItem.xScale = 0.0f;
+                    this.wowmod$leftItem.yScale = 0.0f;
+                    this.wowmod$leftItem.zScale = 0.0f;
+                }
             }
         }
     }

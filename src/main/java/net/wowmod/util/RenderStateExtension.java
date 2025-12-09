@@ -2,52 +2,47 @@ package net.wowmod.util;
 
 import net.minecraft.item.ItemStack;
 
+/**
+ * Duck Interface injected into LivingEntityRenderState via Mixin.
+ * This holds the extra data needed for your animation system.
+ */
 public interface RenderStateExtension {
-    boolean wowmod$isSprinting();
     void wowmod$setSprinting(boolean sprinting);
+    boolean wowmod$isSprinting();
 
-    // Jumping fields
+    void wowmod$setVerticalVelocity(double velocity);
     double wowmod$getVerticalVelocity();
-    void wowmod$setVerticalVelocity(double vy);
 
-    long wowmod$getTimeSinceLanding();
-    void wowmod$setTimeSinceLanding(long ticks);
-
-    boolean wowmod$isOnGround();
     void wowmod$setOnGround(boolean onGround);
+    boolean wowmod$isOnGround();
 
-    // Flight check
-    boolean wowmod$isFlying();
     void wowmod$setFlying(boolean flying);
+    boolean wowmod$isFlying();
 
-    // New State Checks
-    boolean wowmod$isSwimming();
     void wowmod$setSwimming(boolean swimming);
+    boolean wowmod$isSwimming();
 
-    boolean wowmod$isRiding();
     void wowmod$setRiding(boolean riding);
+    boolean wowmod$isRiding();
 
-    // Climbing check
-    boolean wowmod$isClimbing();
     void wowmod$setClimbing(boolean climbing);
+    boolean wowmod$isClimbing();
 
-    // Water detection
-    boolean wowmod$isInWater();
     void wowmod$setInWater(boolean inWater);
+    boolean wowmod$isInWater();
 
-    // --- FIX: Add Main Hand Item Stack Storage ---
-    ItemStack wowmod$getMainHandStack();
     void wowmod$setMainHandStack(ItemStack stack);
+    ItemStack wowmod$getMainHandStack();
 
-    // --- NEW: Add Off Hand Item Stack Storage ---
-    ItemStack wowmod$getOffHandStack();
     void wowmod$setOffHandStack(ItemStack stack);
+    ItemStack wowmod$getOffHandStack();
 
-    // --- NEW: Attack Duration for Split Animation ---
+    void wowmod$setHandSwingDuration(int duration);
     int wowmod$getHandSwingDuration();
-    void wowmod$setHandSwingDuration(int ticks);
 
-    // --- NEW: Blocking State ---
-    boolean wowmod$isBlocking();
     void wowmod$setBlocking(boolean blocking);
+    boolean wowmod$isBlocking();
+
+    void wowmod$setTimeSinceLanding(long time);
+    long wowmod$getTimeSinceLanding();
 }

@@ -16,6 +16,7 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.Identifier;
 import net.wowmod.WeaponsOfWar;
+import net.wowmod.item.custom.DualWieldedWeaponItem;
 import net.wowmod.item.custom.ParryShieldItem;
 import net.wowmod.item.custom.TwoHandedWeaponItem;
 import net.wowmod.item.custom.WeaponItem;
@@ -33,7 +34,7 @@ public class ModItems {
     // --- WEAPONS ---
     // Params: Name, Window (ticks), Block % (0.5 = 50%), Settings
     public static final Item M1113A_DAGGER = registerItem("m1113a_dagger",
-            settings -> new WeaponItem(settings, 5, 0.50f), // Fast parry (3 ticks), low block (40%)
+            settings -> new DualWieldedWeaponItem(settings, 5, 0.50f), // Fast parry (3 ticks), low block (40%)
             createWeaponSettings(3.0, -1.8f, -0.5));
 
     public static final Item M1213A_SHORTSWORD = registerItem("m1213a_shortsword",
