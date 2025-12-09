@@ -8,6 +8,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.ShieldItem;
 import net.minecraft.item.TridentItem;
 import net.minecraft.item.CrossbowItem;
+// Restored your requested import.
+// If this errors on standard 1.21.1, switch to: net.minecraft.util.UseAction
 import net.minecraft.item.consume.UseAction;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
@@ -47,6 +49,10 @@ public class ParryWeaponItem extends Item implements IParryItem {
         return 72000;
     }
 
+    /**
+     * Reverting to 'void' as your environment reports a clash with 'boolean'.
+     * Ensure IParryItem interface also uses 'void postHit(...)'.
+     */
     @Override
     public void postHit(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         stack.damage(1, attacker, EquipmentSlot.MAINHAND);

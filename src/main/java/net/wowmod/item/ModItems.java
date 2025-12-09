@@ -17,6 +17,7 @@ import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.Identifier;
 import net.wowmod.WeaponsOfWar;
 import net.wowmod.item.custom.ParryShieldItem;
+import net.wowmod.item.custom.TwoHandedWeaponItem;
 import net.wowmod.item.custom.WeaponItem;
 import java.util.function.Function;
 
@@ -44,7 +45,7 @@ public class ModItems {
             createWeaponSettings(6.0, -2.6f, 0.5));
 
     public static final Item M1513A_GREATSWORD = registerItem("m1513a_greatsword",
-            settings -> new WeaponItem(settings, 4, 0.70f), // Heavy parry (6 ticks, 70%)
+            settings -> new TwoHandedWeaponItem(settings, 4, 0.70f), // Heavy parry (6 ticks, 70%)
             createWeaponSettings(8.0, -3.0f, 1.0));
 
     public static final Item M2613A_SPEAR = registerItem("m2613a_spear",
